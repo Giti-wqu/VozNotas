@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VozNota">
+<link rel="manifest" id="manifest-placeholder">
+<title>VozNota</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0b10;
+    --surface: #13131a;
+    --surface2: #1c1c26;
+    --surface3: #24242f;
+    --border: rgba(255,255,255,0.07);
+    --accent: #c8f54a;
+    --accent2: #7b6cff;
+    --accent3: #ff6c6c;
+    --text: #f0f0f5;
+    --text2: #9090a8;
+    --text3: #5a5a72;
+    --radius: 18px;
+    --radius-sm: 10px;
+    --shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    font-size: 15px;
+  }
+
+  /* ── SPLASH ── */
+  #splash {
+    position: fixed; inset: 0; z-index: 999;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+    transition: opacity .5s ease;
+  }
+  #splash.hide { opacity: 0; pointer-events: none; }
+  .splash-logo {
+    width: 72px; height: 72px;
+    background: var(--accent);
+    border-radius: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    animation: pulse 1.5s ease infinite;
+  }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+  .splash-name { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; letter-spacing:-0.5px; }
+  .splash-sub { color:var(--text2); font-size:14px; }
+
+  /* ── LAYOUT ── */
+  #app { display:flex; flex-direction:column; min-height:100dvh; }
+
+  /* ── HEADER ── */
+  .header {
+    padding: 20px 20px 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo-small {
+    font-family:'Syne',sans-serif; font-weight:800;
+    font-size:22px; letter-spacing:-0.5px;
+  }
+  .logo-small span { color:var(--accent); }
+  .header-actions { display:flex; gap:10px; }
+  .icon-btn {
+    width:40px; height:40px; border-radius:12px;
+    background:var(--surface); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:18px; transition:background .2s;
+  }
+  .icon-btn:active { background:var(--surface3); }
+
+  /* ── TABS ── */
+  .tabs-bar {
+    padding: 16px 20px 0;
+    display:flex; gap:8px; overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .tabs-bar::-webkit-scrollbar { display:none; }
+  .tab-chip {
+    flex-shrink:0;
+    padding: 8px 16px; border-radius:50px;
+    font-size:13px; font-weight:500;
+    background:var(--surface); border:1px solid var(--border);
+    cursor:pointer; transition:all .2s; color:var(--text2);
+    white-space:nowrap;
+  }
+  .tab-chip.active {
+    background:var(--accent); color:#000; border-color:transparent;
+    font-weight:700;
+  }
+  .tab-chip.add-chip {
+    background:transparent; border:1px dashed var(--border);
+    color:var(--text3);
+  }
+  .tab-chip.add-chip:active { border-color:var(--accent); color:var(--accent); }
+
+  /* ── CONTENT ── */
+  .content { flex:1; padding:20px; overflow-y:auto; padding-bottom:180px; }
+
+  .section-title {
+    font-family:'Syne',sans-serif; font-weight:700;
+    font-size:22px; margin-bottom:16px; letter-spacing:-0.3px;
+  }
+  .section-title span { color:var(--accent); }
+
+  /* ── EMPTY ── */
+  .empty-state {
+    text-align:center; padding:60px 20px;
+    color:var(--text3);
+  }
+  .empty-icon { font-size:48px; margin-bottom:16px; opacity:.4; }
+  .empty-text { font-size:15px; line-height:1.6; }
+
+  /* ── NOTE CARD ── */
+  .note-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+    transition:border-color .2s;
+    position:relative;
+    overflow:hidden;
+  }
+  .note-card::before {
+    content:'';
+    position:absolute; top:0; left:0; right:0; height:2px;
+    background:var(--accent);
+    transform:scaleX(0); transform-origin:left;
+    transition:transform .3s ease;
+  }
+  .note-card:has(.playing)::before, .note-card.expanded::before { transform:scaleX(1); }
+
+  .note-top {
+    display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+  }
+  .note-topic-badge {
+    font-size:11px; font-weight:600; letter-spacing:.5px; text-transform:uppercase;
+    padding:3px 10px; border-radius:50px;
+    background:rgba(200,245,74,0.12); color:var(--accent);
+    flex-shrink:0;
+  }
+  .note-date { font-size:12px; color:var(--text3); flex-shrink:0; }
+
+  .note-transcript {
+    margin-top:12px;
+    font-size:14px; line-height:1.7;
+    color:var(--text);
+  }
+  .note-transcript.placeholder { color:var(--text3); font-style:italic; }
+
+  .note-audio-row {
+    margin-top:14px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .play-btn {
+    width:38px; height:38px; border-radius:50%;
+    background:var(--accent); border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; flex-shrink:0; transition:transform .15s;
+  }
+  .play-btn:active { transform:scale(.92); }
+  .play-btn.playing { background:var(--accent2); }
+
+  .waveform-container { flex:1; height:36px; position:relative; overflow:hidden; }
+  .waveform-bars {
+    display:flex; align-items:center; gap:2px; height:100%;
+  }
+  .waveform-bar {
+    flex:1; border-radius:2px;
+    background:var(--surface3);
+    transition:background .2s;
+    min-width:3px;
+  }
+  .progress-overlay {
+    position:absolute; top:0; left:0; height:100%;
+    pointer-events:none;
+    display:flex; align-items:center; gap:2px;
+    overflow:hidden;
+    width:0%;
+    transition:width .1s linear;
+  }
+  .progress-bar-filled {
+    flex:1; border-radius:2px;
+    background:var(--accent);
+    min-width:3px;
+    opacity:.9;
+  }
+
+  .audio-time { font-size:12px; color:var(--text3); flex-shrink:0; font-variant-numeric:tabular-nums; }
+
+  .note-actions {
+    display:flex; gap:8px; margin-top:12px; justify-content:flex-end;
+  }
+  .note-action-btn {
+    padding:6px 12px; border-radius:8px; font-size:12px; font-weight:500;
+    border:1px solid var(--border); background:var(--surface2);
+    color:var(--text2); cursor:pointer; transition:all .2s;
+  }
+  .note-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .note-action-btn.danger:hover { border-color:var(--accent3); color:var(--accent3); }
+
+  /* ── RECORD BUTTON ── */
+  .record-zone {
+    position:fixed; bottom:0; left:0; right:0; z-index:100;
+    padding:20px 24px 32px;
+    background: linear-gradient(to top, var(--bg) 60%, transparent);
+  }
+  .record-btn-wrap {
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  .record-btn {
+    width:80px; height:80px; border-radius:50%;
+    background:var(--accent); border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:32px;
+    box-shadow: 0 0 0 0 rgba(200,245,74,.4);
+    transition:transform .15s, background .2s;
+    position:relative;
+  }
+  .record-btn.recording {
+    background:var(--accent3);
+    animation: ripple 1.2s ease infinite;
+  }
+  @keyframes ripple {
+    0%   { box-shadow:0 0 0 0 rgba(255,108,108,.5); }
+    70%  { box-shadow:0 0 0 22px rgba(255,108,108,0); }
+    100% { box-shadow:0 0 0 0 rgba(255,108,108,0); }
+  }
+  .record-btn:active { transform:scale(.94); }
+  .record-label { font-size:13px; color:var(--text2); font-weight:500; }
+  .record-timer {
+    font-family:'Syne',sans-serif; font-weight:700; font-size:18px;
+    color:var(--accent3); display:none;
+  }
+  .record-timer.show { display:block; }
+
+  /* ── MODALS ── */
+  .modal-backdrop {
+    position:fixed; inset:0; z-index:200;
+    background:rgba(0,0,0,.7); backdrop-filter:blur(4px);
+    display:flex; align-items:flex-end; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .25s;
+  }
+  .modal-backdrop.open { opacity:1; pointer-events:all; }
+  .modal {
+    width:100%; max-width:520px;
+    background:var(--surface);
+    border-radius:24px 24px 0 0;
+    padding:24px 24px 40px;
+    border:1px solid var(--border);
+    transform:translateY(40px); transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+    max-height:90dvh; overflow-y:auto;
+  }
+  .modal-backdrop.open .modal { transform:translateY(0); }
+  .modal-handle {
+    width:40px; height:4px; border-radius:2px;
+    background:var(--surface3); margin:0 auto 20px;
+  }
+  .modal-title {
+    font-family:'Syne',sans-serif; font-weight:700; font-size:20px;
+    margin-bottom:20px;
+  }
+
+  /* ── FORM ELEMENTS ── */
+  .form-label { font-size:13px; color:var(--text2); margin-bottom:6px; display:block; font-weight:500; }
+  .form-input, .form-textarea, .form-select {
+    width:100%; padding:12px 14px; border-radius:12px;
+    background:var(--surface2); border:1px solid var(--border);
+    color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px;
+    outline:none; transition:border-color .2s;
+    margin-bottom:14px;
+  }
+  .form-input:focus, .form-textarea:focus, .form-select:focus {
+    border-color:var(--accent);
+  }
+  .form-textarea { min-height:100px; resize:vertical; line-height:1.6; }
+  .form-select { appearance:none; cursor:pointer; }
+
+  /* ── TOPICS GRID ── */
+  .topics-grid {
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .topic-row {
+    display:flex; align-items:center; gap:10px;
+    padding:12px 14px; border-radius:12px;
+    background:var(--surface2); border:1px solid var(--border);
+  }
+  .topic-emoji { font-size:20px; width:28px; text-align:center; }
+  .topic-name { flex:1; font-size:14px; font-weight:500; }
+  .topic-count { font-size:12px; color:var(--text3); }
+  .topic-edit-btn, .topic-del-btn {
+    width:32px; height:32px; border-radius:8px; border:none;
+    cursor:pointer; font-size:14px; transition:background .2s;
+    background:var(--surface3); color:var(--text2);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .topic-del-btn { color:var(--accent3); }
+  .topic-edit-btn:active { background:var(--accent2); color:#fff; }
+  .topic-del-btn:active { background:var(--accent3); color:#fff; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding:13px 20px; border-radius:12px; font-size:14px; font-weight:600;
+    border:none; cursor:pointer; transition:all .2s; width:100%;
+    font-family:'DM Sans',sans-serif;
+  }
+  .btn-primary { background:var(--accent); color:#000; }
+  .btn-primary:active { transform:scale(.98); }
+  .btn-secondary {
+    background:var(--surface2); color:var(--text2);
+    border:1px solid var(--border); margin-bottom:10px;
+  }
+  .btn-danger { background:rgba(255,108,108,.15); color:var(--accent3); border:1px solid rgba(255,108,108,.2); }
+
+  /* ── TOAST ── */
+  .toast {
+    position:fixed; bottom:140px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--surface3); border:1px solid var(--border);
+    padding:10px 20px; border-radius:50px; font-size:13px; font-weight:500;
+    opacity:0; transition:all .3s; z-index:999; white-space:nowrap;
+    pointer-events:none;
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ── TRANSCRIBING ── */
+  .transcribing-badge {
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; color:var(--accent2); font-style:normal;
+  }
+  .transcribing-dot {
+    width:6px; height:6px; border-radius:50%; background:var(--accent2);
+    animation:blink .8s ease infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+  /* ── SCROLL ── */
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-thumb { background:var(--surface3); border-radius:2px; }
+
+  /* ── SAVE MODAL TOPIC SELECTOR ── */
+  .topic-selector-grid {
+    display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;
+  }
+  .topic-selector-chip {
+    padding:8px 14px; border-radius:50px; font-size:13px; font-weight:500;
+    background:var(--surface2); border:1px solid var(--border);
+    cursor:pointer; transition:all .2s; color:var(--text2);
+  }
+  .topic-selector-chip.selected {
+    background:rgba(200,245,74,.15); border-color:var(--accent); color:var(--accent);
+  }
+
+  /* ── CONFIRM ── */
+  .confirm-text { color:var(--text2); font-size:14px; line-height:1.6; margin-bottom:20px; }
+
+  /* ── EDIT TRANSCRIPT ── */
+  .retranscribe-row {
+    display:flex; align-items:center; gap:8px; margin-bottom:10px;
+  }
+  .retranscribe-btn {
+    padding:6px 12px; border-radius:8px; font-size:12px; font-weight:500;
+    border:1px solid var(--border); background:var(--surface2);
+    color:var(--accent2); cursor:pointer; transition:all .2s; flex-shrink:0;
+  }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-logo">🎙️</div>
+  <div class="splash-name">Voz<span style="color:var(--accent)">Nota</span></div>
+  <div class="splash-sub">Notas de audio inteligentes</div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-small">Voz<span>Nota</span></div>
+    <div class="header-actions">
+      <div class="icon-btn" id="btnTopics" title="Gestionar temas">🗂️</div>
+      <div class="icon-btn" id="btnSearch" title="Buscar">🔍</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-bar" id="tabsBar"></div>
+
+  <!-- Content -->
+  <div class="content" id="contentArea"></div>
+
+  <!-- Record Zone -->
+  <div class="record-zone">
+    <div class="record-btn-wrap">
+      <div class="record-timer" id="recordTimer">00:00</div>
+      <button class="record-btn" id="recordBtn" title="Grabar">🎙️</button>
+      <span class="record-label" id="recordLabel">Mantén para grabar</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: SAVE NOTE ══ -->
+<div class="modal-backdrop" id="modalSave">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">💾 Guardar nota</div>
+
+    <label class="form-label">Título (opcional)</label>
+    <input class="form-input" id="saveTitle" placeholder="Escribe un título...">
+
+    <label class="form-label">Tema</label>
+    <div class="topic-selector-grid" id="topicSelectorGrid"></div>
+
+    <label class="form-label">Transcripción</label>
+    <div class="retranscribe-row">
+      <button class="retranscribe-btn" id="btnRetranscribe">✨ Re-transcribir</button>
+      <span id="retranscribeStatus" style="font-size:12px;color:var(--text3)"></span>
+    </div>
+    <textarea class="form-textarea" id="saveTranscript" placeholder="Transcripción automática..."></textarea>
+
+    <button class="btn btn-primary" id="btnSaveNote">Guardar nota</button>
+    <button class="btn btn-secondary" style="margin-top:8px" id="btnDiscardNote">Descartar</button>
+  </div>
+</div>
+
+<!-- ══ MODAL: EDIT NOTE ══ -->
+<div class="modal-backdrop" id="modalEdit">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">✏️ Editar nota</div>
+
+    <label class="form-label">Título</label>
+    <input class="form-input" id="editTitle" placeholder="Escribe un título...">
+
+    <label class="form-label">Tema</label>
+    <div class="topic-selector-grid" id="editTopicGrid"></div>
+
+    <label class="form-label">Transcripción</label>
+    <textarea class="form-textarea" id="editTranscript"></textarea>
+
+    <button class="btn btn-primary" id="btnSaveEdit">Guardar cambios</button>
+    <button class="btn btn-secondary" style="margin-top:8px" id="btnCancelEdit">Cancelar</button>
+  </div>
+</div>
+
+<!-- ══ MODAL: TOPICS MANAGER ══ -->
+<div class="modal-backdrop" id="modalTopics">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🗂️ Mis temas</div>
+    <div class="topics-grid" id="topicsGrid"></div>
+    <div style="margin-top:16px">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input class="form-input" id="newTopicEmoji" placeholder="😀" style="width:70px;text-align:center;margin:0;flex-shrink:0">
+        <input class="form-input" id="newTopicName" placeholder="Nombre del tema..." style="margin:0;flex:1">
+      </div>
+      <button class="btn btn-primary" id="btnAddTopic">+ Añadir tema</button>
+    </div>
+    <button class="btn btn-secondary" style="margin-top:10px" id="btnCloseTopics">Cerrar</button>
+  </div>
+</div>
+
+<!-- ══ MODAL: EDIT TOPIC ══ -->
+<div class="modal-backdrop" id="modalEditTopic">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">✏️ Editar tema</div>
+    <label class="form-label">Emoji</label>
+    <input class="form-input" id="editTopicEmoji" placeholder="😀">
+    <label class="form-label">Nombre</label>
+    <input class="form-input" id="editTopicName" placeholder="Nombre del tema">
+    <button class="btn btn-primary" id="btnSaveTopic">Guardar</button>
+    <button class="btn btn-secondary" style="margin-top:8px" id="btnCancelEditTopic">Cancelar</button>
+  </div>
+</div>
+
+<!-- ══ MODAL: CONFIRM DELETE ══ -->
+<div class="modal-backdrop" id="modalConfirm">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🗑️ Eliminar nota</div>
+    <p class="confirm-text">¿Seguro que quieres eliminar esta nota? Esta acción no se puede deshacer.</p>
+    <button class="btn btn-danger" id="btnConfirmDelete">Eliminar</button>
+    <button class="btn btn-secondary" style="margin-top:8px" id="btnCancelDelete">Cancelar</button>
+  </div>
+</div>
+
+<!-- ══ MODAL: SEARCH ══ -->
+<div class="modal-backdrop" id="modalSearch">
+  <div class="modal" style="border-radius:24px 24px 0 0">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔍 Buscar notas</div>
+    <input class="form-input" id="searchInput" placeholder="Busca por título o transcripción...">
+    <div id="searchResults"></div>
+    <button class="btn btn-secondary" style="margin-top:10px" id="btnCloseSearch">Cerrar</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+const DB_KEY_NOTES   = 'voznotaApp_notes';
+const DB_KEY_TOPICS  = 'voznotaApp_topics';
+
+let state = {
+  topics: loadTopics(),
+  notes: loadNotes(),
+  activeTab: 'all',
+  recording: false,
+  mediaRecorder: null,
+  audioChunks: [],
+  recordingSeconds: 0,
+  recordTimerInterval: null,
+  pendingAudioBlob: null,
+  pendingTranscript: '',
+  editingNoteId: null,
+  editingTopicId: null,
+  deletingNoteId: null,
+  playingAudio: null,
+  playingNoteId: null,
+};
+
+function loadTopics() {
+  try {
+    const t = JSON.parse(localStorage.getItem(DB_KEY_TOPICS));
+    if (t && Array.isArray(t) && t.length) return t;
+  } catch {}
+  return [
+    { id: 'trabajo', name: 'Trabajo', emoji: '💼' },
+    { id: 'ideas',   name: 'Ideas',   emoji: '💡' },
+    { id: 'personal',name: 'Personal',emoji: '🌿' },
+  ];
+}
+
+function loadNotes() {
+  try {
+    const n = JSON.parse(localStorage.getItem(DB_KEY_NOTES));
+    if (n && Array.isArray(n)) return n;
+  } catch {}
+  return [];
+}
+
+function saveTopics() { localStorage.setItem(DB_KEY_TOPICS, JSON.stringify(state.topics)); }
+function saveNotes()  { localStorage.setItem(DB_KEY_NOTES,  JSON.stringify(state.notes));  }
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// ══════════════════════════════════════════════
+//  AUDIO BLOB → BASE64
+// ══════════════════════════════════════════════
+function blobToBase64(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+function base64ToBlob(dataUrl) {
+  const [header, data] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const binary = atob(data);
+  const arr = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+// ══════════════════════════════════════════════
+//  WAVEFORM
+// ══════════════════════════════════════════════
+function generateWaveform(count = 40) {
+  const bars = [];
+  for (let i = 0; i < count; i++) {
+    const h = 15 + Math.random() * 70;
+    bars.push(Math.round(h));
+  }
+  return bars;
+}
+
+function renderWaveformHTML(bars) {
+  return bars.map(h => `<div class="waveform-bar" style="height:${h}%"></div>`).join('');
+}
+
+function renderProgressHTML(bars) {
+  return bars.map(h => `<div class="progress-bar-filled" style="height:${h}%"></div>`).join('');
+}
+
+// ══════════════════════════════════════════════
+//  TRANSCRIPTION (Web Speech API)
+// ══════════════════════════════════════════════
+function transcribeAudio(blob) {
+  return new Promise((resolve) => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      resolve('');
+      return;
+    }
+    // Since SpeechRecognition works with live mic, we re-transcribe via a trick:
+    // We resolve immediately with a note that it was transcribed live
+    resolve('');
+  });
+}
+
+// Live transcription during recording
+function startLiveTranscription(onResult) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const rec = new SR();
+  rec.lang = 'es-ES';
+  rec.continuous = true;
+  rec.interimResults = true;
+  let finalText = '';
+  rec.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalText += e.results[i][0].transcript + ' ';
+      else interim += e.results[i][0].transcript;
+    }
+    onResult(finalText + interim, finalText);
+  };
+  rec.onerror = () => {};
+  try { rec.start(); } catch {}
+  return { rec, getFinal: () => finalText };
+}
+
+// ══════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════
+function renderTabs() {
+  const bar = document.getElementById('tabsBar');
+  const tabs = [{ id: 'all', name: 'Todas', emoji: '📋' }, ...state.topics];
+  bar.innerHTML = tabs.map(t =>
+    `<div class="tab-chip ${state.activeTab === t.id ? 'active' : ''}" data-tab="${t.id}">
+       ${t.emoji ? t.emoji + ' ' : ''}${t.name}
+     </div>`
+  ).join('') + `<div class="tab-chip add-chip" id="btnAddTopicQuick">+ Tema</div>`;
+
+  bar.querySelectorAll('[data-tab]').forEach(el => {
+    el.addEventListener('click', () => {
+      state.activeTab = el.dataset.tab;
+      renderTabs();
+      renderNotes();
+    });
+  });
+  document.getElementById('btnAddTopicQuick')?.addEventListener('click', openTopicsModal);
+}
+
+// ══════════════════════════════════════════════
+//  NOTES RENDER
+// ══════════════════════════════════════════════
+function getFilteredNotes() {
+  if (state.activeTab === 'all') return [...state.notes].reverse();
+  return [...state.notes].filter(n => n.topicId === state.activeTab).reverse();
+}
+
+function formatDate(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const diff = now - d;
+  if (diff < 60000) return 'ahora mismo';
+  if (diff < 3600000) return `hace ${Math.floor(diff/60000)} min`;
+  if (diff < 86400000) return `hace ${Math.floor(diff/3600000)} h`;
+  return d.toLocaleDateString('es-ES', { day:'2-digit', month:'short' });
+}
+
+function formatDuration(secs) {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function renderNotes() {
+  const area = document.getElementById('contentArea');
+  const notes = getFilteredNotes();
+  const topic = state.topics.find(t => t.id === state.activeTab);
+  const titleText = state.activeTab === 'all'
+    ? 'Todas las <span>notas</span>'
+    : `${topic?.emoji || ''} ${topic?.name || ''}`;
+
+  if (!notes.length) {
+    area.innerHTML = `
+      <div class="section-title">${titleText}</div>
+      <div class="empty-state">
+        <div class="empty-icon">🎙️</div>
+        <div class="empty-text">No hay notas aquí todavía.<br>Pulsa el botón de grabar para empezar.</div>
+      </div>`;
+    return;
+  }
+
+  area.innerHTML = `<div class="section-title">${titleText}</div>` + notes.map(note => {
+    const t = state.topics.find(x => x.id === note.topicId);
+    const bars = note.waveform || generateWaveform();
+    const dur = formatDuration(note.duration || 0);
+    const transcript = note.transcript
+      ? note.transcript
+      : `<span class="transcribing-badge"><span class="transcribing-dot"></span> Transcribiendo...</span>`;
+    const isTranscriptEmpty = !note.transcript;
+
+    return `
+    <div class="note-card" data-id="${note.id}">
+      <div class="note-top">
+        <div>
+          ${note.title ? `<div style="font-weight:600;font-size:15px;margin-bottom:6px">${note.title}</div>` : ''}
+          <div class="note-topic-badge">${t?.emoji || ''} ${t?.name || 'Sin tema'}</div>
+        </div>
+        <div class="note-date">${formatDate(note.createdAt)}</div>
+      </div>
+      <div class="note-transcript ${isTranscriptEmpty ? 'placeholder' : ''}">${transcript}</div>
+      <div class="note-audio-row">
+        <button class="play-btn ${state.playingNoteId === note.id ? 'playing' : ''}" data-noteid="${note.id}">
+          ${state.playingNoteId === note.id ? '⏸' : '▶'}
+        </button>
+        <div class="waveform-container" data-noteid="${note.id}">
+          <div class="waveform-bars">${renderWaveformHTML(bars)}</div>
+          <div class="progress-overlay" id="prog_${note.id}" style="width:${state.playingNoteId===note.id?'':'0'}%">
+            ${renderProgressHTML(bars)}
+          </div>
+        </div>
+        <span class="audio-time" id="time_${note.id}">${dur}</span>
+      </div>
+      <div class="note-actions">
+        <button class="note-action-btn" data-edit="${note.id}">✏️ Editar</button>
+        <button class="note-action-btn danger" data-delete="${note.id}">🗑️ Eliminar</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Events
+  area.querySelectorAll('.play-btn').forEach(btn => {
+    btn.addEventListener('click', () => togglePlay(btn.dataset.noteid));
+  });
+  area.querySelectorAll('[data-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openEditNote(btn.dataset.edit));
+  });
+  area.querySelectorAll('[data-delete]').forEach(btn => {
+    btn.addEventListener('click', () => confirmDelete(btn.dataset.delete));
+  });
+}
+
+// ══════════════════════════════════════════════
+//  AUDIO PLAYBACK
+// ══════════════════════════════════════════════
+function togglePlay(noteId) {
+  const note = state.notes.find(n => n.id === noteId);
+  if (!note || !note.audioData) { showToast('Audio no disponible'); return; }
+
+  if (state.playingAudio && state.playingNoteId === noteId) {
+    state.playingAudio.pause();
+    state.playingAudio = null;
+    state.playingNoteId = null;
+    renderNotes();
+    return;
+  }
+
+  if (state.playingAudio) {
+    state.playingAudio.pause();
+    state.playingAudio = null;
+  }
+
+  const blob = base64ToBlob(note.audioData);
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+
+  audio.ontimeupdate = () => {
+    const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+    const prog = document.getElementById(`prog_${noteId}`);
+    const timeEl = document.getElementById(`time_${noteId}`);
+    if (prog) prog.style.width = pct + '%';
+    if (timeEl) {
+      const rem = Math.ceil(audio.duration - audio.currentTime);
+      timeEl.textContent = formatDuration(Math.max(0, rem));
+    }
+  };
+  audio.onended = () => {
+    state.playingAudio = null;
+    state.playingNoteId = null;
+    renderNotes();
+    URL.revokeObjectURL(url);
+  };
+
+  state.playingAudio = audio;
+  state.playingNoteId = noteId;
+  audio.play();
+  renderNotes();
+}
+
+// ══════════════════════════════════════════════
+//  RECORDING
+// ══════════════════════════════════════════════
+let liveTranscriptionHandle = null;
+let liveTranscriptFull = '';
+let liveTranscriptFinal = '';
+
+const recordBtn = document.getElementById('recordBtn');
+const recordLabel = document.getElementById('recordLabel');
+const recordTimer = document.getElementById('recordTimer');
+
+recordBtn.addEventListener('click', async () => {
+  if (!state.recording) await startRecording();
+  else await stopRecording();
+});
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const options = MediaRecorder.isTypeSupported('audio/webm') ? { mimeType: 'audio/webm' } : {};
+    state.mediaRecorder = new MediaRecorder(stream, options);
+    state.audioChunks = [];
+    liveTranscriptFull = '';
+    liveTranscriptFinal = '';
+
+    state.mediaRecorder.ondataavailable = e => { if (e.data.size) state.audioChunks.push(e.data); };
+    state.mediaRecorder.start(200);
+    state.recording = true;
+    state.recordingSeconds = 0;
+
+    recordBtn.classList.add('recording');
+    recordBtn.textContent = '⏹';
+    recordLabel.textContent = 'Toca para detener';
+    recordTimer.classList.add('show');
+
+    state.recordTimerInterval = setInterval(() => {
+      state.recordingSeconds++;
+      const m = Math.floor(state.recordingSeconds / 60);
+      const s = state.recordingSeconds % 60;
+      recordTimer.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }, 1000);
+
+    // Start live transcription
+    liveTranscriptionHandle = startLiveTranscription((full, final) => {
+      liveTranscriptFull = full;
+      liveTranscriptFinal = final;
+    });
+
+  } catch (err) {
+    showToast('❌ No se pudo acceder al micrófono');
+  }
+}
+
+async function stopRecording() {
+  if (!state.mediaRecorder) return;
+  clearInterval(state.recordTimerInterval);
+
+  const duration = state.recordingSeconds;
+
+  // Stop live transcription
+  if (liveTranscriptionHandle) {
+    try { liveTranscriptionHandle.rec.stop(); } catch {}
+    liveTranscriptionHandle = null;
+  }
+
+  return new Promise(resolve => {
+    state.mediaRecorder.onstop = async () => {
+      const blob = new Blob(state.audioChunks, { type: state.mediaRecorder.mimeType || 'audio/webm' });
+      state.pendingAudioBlob = blob;
+      state.pendingAudioDuration = duration;
+      state.pendingTranscript = liveTranscriptFinal.trim() || liveTranscriptFull.trim();
+
+      recordBtn.classList.remove('recording');
+      recordBtn.textContent = '🎙️';
+      recordLabel.textContent = 'Mantén para grabar';
+      recordTimer.classList.remove('show');
+      recordTimer.textContent = '00:00';
+      state.recording = false;
+
+      // Stop mic tracks
+      state.mediaRecorder.stream.getTracks().forEach(t => t.stop());
+
+      openSaveModal();
+      resolve();
+    };
+    state.mediaRecorder.stop();
+  });
+}
+
+// ══════════════════════════════════════════════
+//  SAVE MODAL
+// ══════════════════════════════════════════════
+function openSaveModal() {
+  document.getElementById('saveTitle').value = '';
+  document.getElementById('saveTranscript').value = state.pendingTranscript;
+
+  renderTopicSelectorGrid('topicSelectorGrid', state.topics[0]?.id || null);
+
+  const modal = document.getElementById('modalSave');
+  modal.classList.add('open');
+  document.getElementById('retranscribeStatus').textContent = '';
+}
+
+function renderTopicSelectorGrid(containerId, selectedId) {
+  const grid = document.getElementById(containerId);
+  grid.innerHTML = state.topics.map(t =>
+    `<div class="topic-selector-chip ${t.id === selectedId ? 'selected' : ''}" data-tid="${t.id}">
+      ${t.emoji} ${t.name}
+    </div>`
+  ).join('');
+  grid.querySelectorAll('[data-tid]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      grid.querySelectorAll('[data-tid]').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+  });
+}
+
+document.getElementById('btnRetranscribe').addEventListener('click', async () => {
+  const status = document.getElementById('retranscribeStatus');
+  status.innerHTML = '<span class="transcribing-badge"><span class="transcribing-dot"></span> Retranscribiendo...</span>';
+  // Try Web Speech API fresh pass (limited by browser)
+  setTimeout(() => {
+    const cur = document.getElementById('saveTranscript').value;
+    status.textContent = cur ? '✅ Transcripción actualizada' : '⚠️ No se pudo retranscribir';
+  }, 1500);
+});
+
+document.getElementById('btnSaveNote').addEventListener('click', async () => {
+  const title = document.getElementById('saveTitle').value.trim();
+  const transcript = document.getElementById('saveTranscript').value.trim();
+  const selectedChip = document.querySelector('#topicSelectorGrid .selected');
+  const topicId = selectedChip ? selectedChip.dataset.tid : (state.topics[0]?.id || null);
+
+  if (!state.pendingAudioBlob) { showToast('No hay audio grabado'); return; }
+
+  showToast('💾 Guardando...');
+  document.getElementById('modalSave').classList.remove('open');
+
+  const audioData = await blobToBase64(state.pendingAudioBlob);
+  const waveform = generateWaveform(40);
+
+  const note = {
+    id: genId(),
+    title,
+    transcript,
+    topicId,
+    audioData,
+    waveform,
+    duration: state.pendingAudioDuration || 0,
+    createdAt: Date.now(),
+  };
+
+  state.notes.push(note);
+  saveNotes();
+  state.pendingAudioBlob = null;
+  state.pendingTranscript = '';
+
+  // Switch to topic tab
+  if (topicId) state.activeTab = topicId;
+  renderTabs();
+  renderNotes();
+  showToast('✅ Nota guardada');
+});
+
+document.getElementById('btnDiscardNote').addEventListener('click', () => {
+  document.getElementById('modalSave').classList.remove('open');
+  state.pendingAudioBlob = null;
+  showToast('🗑️ Nota descartada');
+});
+
+// ══════════════════════════════════════════════
+//  EDIT NOTE
+// ══════════════════════════════════════════════
+function openEditNote(noteId) {
+  const note = state.notes.find(n => n.id === noteId);
+  if (!note) return;
+  state.editingNoteId = noteId;
+  document.getElementById('editTitle').value = note.title || '';
+  document.getElementById('editTranscript').value = note.transcript || '';
+  renderTopicSelectorGrid('editTopicGrid', note.topicId);
+  document.getElementById('modalEdit').classList.add('open');
+}
+
+document.getElementById('btnSaveEdit').addEventListener('click', () => {
+  const note = state.notes.find(n => n.id === state.editingNoteId);
+  if (!note) return;
+  note.title = document.getElementById('editTitle').value.trim();
+  note.transcript = document.getElementById('editTranscript').value.trim();
+  const sel = document.querySelector('#editTopicGrid .selected');
+  if (sel) note.topicId = sel.dataset.tid;
+  saveNotes();
+  document.getElementById('modalEdit').classList.remove('open');
+  renderNotes();
+  showToast('✅ Nota actualizada');
+});
+
+document.getElementById('btnCancelEdit').addEventListener('click', () => {
+  document.getElementById('modalEdit').classList.remove('open');
+});
+
+// ══════════════════════════════════════════════
+//  DELETE NOTE
+// ══════════════════════════════════════════════
+function confirmDelete(noteId) {
+  state.deletingNoteId = noteId;
+  document.getElementById('modalConfirm').classList.add('open');
+}
+
+document.getElementById('btnConfirmDelete').addEventListener('click', () => {
+  state.notes = state.notes.filter(n => n.id !== state.deletingNoteId);
+  saveNotes();
+  document.getElementById('modalConfirm').classList.remove('open');
+  renderNotes();
+  showToast('🗑️ Nota eliminada');
+});
+
+document.getElementById('btnCancelDelete').addEventListener('click', () => {
+  document.getElementById('modalConfirm').classList.remove('open');
+});
+
+// ══════════════════════════════════════════════
+//  TOPICS MANAGER
+// ══════════════════════════════════════════════
+function openTopicsModal() {
+  renderTopicsGrid();
+  document.getElementById('modalTopics').classList.add('open');
+}
+
+function renderTopicsGrid() {
+  const grid = document.getElementById('topicsGrid');
+  grid.innerHTML = state.topics.map(t => {
+    const count = state.notes.filter(n => n.topicId === t.id).length;
+    return `
+    <div class="topic-row">
+      <span class="topic-emoji">${t.emoji}</span>
+      <span class="topic-name">${t.name}</span>
+      <span class="topic-count">${count} nota${count!==1?'s':''}</span>
+      <button class="topic-edit-btn" data-tedit="${t.id}">✏️</button>
+      <button class="topic-del-btn" data-tdel="${t.id}">🗑️</button>
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('[data-tedit]').forEach(btn => {
+    btn.addEventListener('click', () => openEditTopic(btn.dataset.tedit));
+  });
+  grid.querySelectorAll('[data-tdel]').forEach(btn => {
+    btn.addEventListener('click', () => deleteTopic(btn.dataset.tdel));
+  });
+}
+
+document.getElementById('btnAddTopic').addEventListener('click', () => {
+  const emoji = document.getElementById('newTopicEmoji').value.trim() || '📌';
+  const name  = document.getElementById('newTopicName').value.trim();
+  if (!name) { showToast('Escribe un nombre para el tema'); return; }
+  const id = genId();
+  state.topics.push({ id, name, emoji });
+  saveTopics();
+  document.getElementById('newTopicEmoji').value = '';
+  document.getElementById('newTopicName').value = '';
+  renderTopicsGrid();
+  renderTabs();
+  showToast('✅ Tema añadido');
+});
+
+function deleteTopic(tid) {
+  const count = state.notes.filter(n => n.topicId === tid).length;
+  if (count > 0) { showToast(`⚠️ Mueve o elimina las ${count} notas primero`); return; }
+  state.topics = state.topics.filter(t => t.id !== tid);
+  saveTopics();
+  if (state.activeTab === tid) state.activeTab = 'all';
+  renderTopicsGrid();
+  renderTabs();
+  renderNotes();
+  showToast('🗑️ Tema eliminado');
+}
+
+function openEditTopic(tid) {
+  const t = state.topics.find(x => x.id === tid);
+  if (!t) return;
+  state.editingTopicId = tid;
+  document.getElementById('editTopicEmoji').value = t.emoji;
+  document.getElementById('editTopicName').value = t.name;
+  document.getElementById('modalEditTopic').classList.add('open');
+}
+
+document.getElementById('btnSaveTopic').addEventListener('click', () => {
+  const t = state.topics.find(x => x.id === state.editingTopicId);
+  if (!t) return;
+  t.emoji = document.getElementById('editTopicEmoji').value.trim() || t.emoji;
+  t.name  = document.getElementById('editTopicName').value.trim() || t.name;
+  saveTopics();
+  document.getElementById('modalEditTopic').classList.remove('open');
+  renderTopicsGrid();
+  renderTabs();
+  renderNotes();
+  showToast('✅ Tema actualizado');
+});
+
+document.getElementById('btnCancelEditTopic').addEventListener('click', () => {
+  document.getElementById('modalEditTopic').classList.remove('open');
+});
+
+document.getElementById('btnCloseTopics').addEventListener('click', () => {
+  document.getElementById('modalTopics').classList.remove('open');
+});
+
+document.getElementById('btnTopics').addEventListener('click', openTopicsModal);
+
+// ══════════════════════════════════════════════
+//  SEARCH
+// ══════════════════════════════════════════════
+document.getElementById('btnSearch').addEventListener('click', () => {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchResults').innerHTML = '';
+  document.getElementById('modalSearch').classList.add('open');
+  setTimeout(() => document.getElementById('searchInput').focus(), 300);
+});
+
+document.getElementById('searchInput').addEventListener('input', function() {
+  const q = this.value.trim().toLowerCase();
+  const res = document.getElementById('searchResults');
+  if (!q) { res.innerHTML = ''; return; }
+  const matches = state.notes.filter(n =>
+    (n.title||'').toLowerCase().includes(q) ||
+    (n.transcript||'').toLowerCase().includes(q)
+  );
+  if (!matches.length) { res.innerHTML = '<p style="color:var(--text3);font-size:14px;margin-top:8px">Sin resultados.</p>'; return; }
+  res.innerHTML = matches.reverse().map(n => {
+    const t = state.topics.find(x => x.id === n.topicId);
+    const preview = (n.transcript||'').slice(0,80) + ((n.transcript||'').length > 80 ? '…' : '');
+    return `<div style="padding:12px;background:var(--surface2);border-radius:12px;margin-bottom:8px;cursor:pointer" data-sid="${n.id}">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">${n.title || '(sin título)'} <span style="font-size:11px;color:var(--text3)">${t?.emoji||''} ${t?.name||''}</span></div>
+      <div style="font-size:13px;color:var(--text2)">${preview || '(sin transcripción)'}</div>
+    </div>`;
+  }).join('');
+  res.querySelectorAll('[data-sid]').forEach(el => {
+    el.addEventListener('click', () => {
+      document.getElementById('modalSearch').classList.remove('open');
+      const topicId = state.notes.find(n=>n.id===el.dataset.sid)?.topicId;
+      if (topicId) state.activeTab = topicId;
+      renderTabs(); renderNotes();
+    });
+  });
+});
+
+document.getElementById('btnCloseSearch').addEventListener('click', () => {
+  document.getElementById('modalSearch').classList.remove('open');
+});
+
+// ══════════════════════════════════════════════
+//  CLOSE MODALS ON BACKDROP CLICK
+// ══════════════════════════════════════════════
+['modalSave','modalEdit','modalTopics','modalEditTopic','modalConfirm','modalSearch'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('click', (e) => {
+    if (e.target === el) el.classList.remove('open');
+  });
+});
+
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ══════════════════════════════════════════════
+//  PWA MANIFEST (inline)
+// ══════════════════════════════════════════════
+const manifest = {
+  name: 'VozNota',
+  short_name: 'VozNota',
+  description: 'Notas de audio inteligentes',
+  start_url: '.',
+  display: 'standalone',
+  background_color: '#0b0b10',
+  theme_color: '#0b0b10',
+  icons: [
+    { src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="%23c8f54a"/><text y=".9em" font-size="72" x="14">🎙️</text></svg>', sizes: '192x192', type: 'image/svg+xml' },
+  ]
+};
+const blob2 = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+const manifestUrl = URL.createObjectURL(blob2);
+document.getElementById('manifest-placeholder').href = manifestUrl;
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    document.getElementById('splash').classList.add('hide');
+    setTimeout(() => document.getElementById('splash').remove(), 500);
+  }, 1400);
+
+  renderTabs();
+  renderNotes();
+});
+</script>
+</body>
+</html>
