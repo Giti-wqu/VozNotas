@@ -1,0 +1,1983 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Genesis — Árbol Evolutivo Completo</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#04080a;--panel:rgba(4,10,12,.97);--border:rgba(50,150,100,.15);
+  --accent:#4ade80;--accent2:#22d3ee;--accent3:#f59e0b;
+  --text:#dff0e6;--text2:#6a9b7a;--text3:#2d5a3d;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Crimson Pro',serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw;}
+
+/* ── HEADER ── */
+#header{
+  position:fixed;top:0;left:0;right:0;height:48px;z-index:100;
+  background:rgba(4,8,10,.98);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:12px;
+}
+.htitle{font-family:'Cinzel',serif;font-size:16px;font-weight:700;
+  background:linear-gradient(135deg,#4ade80,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hstat{font-size:11px;color:var(--text3);padding:0 10px;border-left:1px solid var(--border);}
+.hstat span{color:var(--accent);}
+.spacer{flex:1;}
+.hbtn{padding:5px 12px;border-radius:7px;font-family:'Crimson Pro',serif;font-size:11px;font-weight:600;
+  border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;transition:all .2s;}
+.hbtn:hover{background:rgba(74,222,128,.1);border-color:var(--accent);}
+.hbtn.active{background:rgba(74,222,128,.15);border-color:var(--accent);color:var(--accent);}
+
+/* ── FILTER BAR ── */
+#filterBar{
+  position:fixed;top:48px;left:0;right:0;height:40px;z-index:90;
+  background:rgba(4,8,10,.95);border-bottom:1px solid rgba(255,255,255,.04);
+  display:flex;align-items:center;padding:0 12px;gap:6px;overflow-x:auto;
+}
+#filterBar::-webkit-scrollbar{display:none;}
+.filter-chip{
+  flex-shrink:0;padding:4px 12px;border-radius:50px;font-size:11px;font-weight:600;
+  border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);
+  color:var(--text2);cursor:pointer;transition:all .2s;white-space:nowrap;
+}
+.filter-chip:hover{border-color:rgba(74,222,128,.3);color:var(--accent);}
+.filter-chip.active{border-color:var(--accent);background:rgba(74,222,128,.12);color:var(--accent);}
+
+/* ── CANVAS ── */
+#treeCanvas{position:fixed;top:88px;left:0;right:260px;bottom:0;cursor:grab;}
+#treeCanvas.dragging{cursor:grabbing;}
+
+/* ── DETAIL PANEL ── */
+#detailPanel{
+  position:fixed;right:0;top:88px;bottom:0;width:260px;
+  background:var(--panel);border-left:1px solid var(--border);
+  overflow-y:auto;
+}
+#detailPanel::-webkit-scrollbar{width:3px;}
+#detailPanel::-webkit-scrollbar-thumb{background:var(--border);}
+.dp-empty{padding:30px 16px;text-align:center;color:var(--text3);font-size:13px;margin-top:40px;}
+.dp-icon{font-size:48px;margin-bottom:12px;}
+.dp-section{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.04);}
+.dp-title{font-family:'Cinzel',serif;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;}
+.dp-name{font-size:18px;font-weight:700;margin-bottom:3px;}
+.dp-type{font-size:11px;color:var(--text3);margin-bottom:8px;}
+.dp-desc{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px;}
+.dp-tag{display:inline-block;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:600;margin:2px;border:1px solid;}
+.gene-row{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.gene-lbl{font-size:9px;color:var(--text3);width:80px;flex-shrink:0;}
+.gene-bar{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.07);overflow:hidden;}
+.gene-fill{height:100%;border-radius:2px;}
+.gene-v{font-size:9px;color:var(--text2);width:24px;text-align:right;}
+.dp-children{padding:8px 14px;}
+.child-chip{
+  display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;
+  border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);
+  margin-bottom:5px;cursor:pointer;transition:all .2s;font-size:11px;
+}
+.child-chip:hover{border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.05);}
+.unlock-cond{font-size:10px;color:var(--text3);margin-top:3px;}
+
+/* ── LEGEND ── */
+#legend{
+  position:fixed;bottom:10px;left:10px;
+  background:rgba(4,8,10,.9);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;z-index:50;
+}
+.leg-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:10px;color:var(--text2);}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* ── TOOLTIP ── */
+#tooltip{
+  position:fixed;z-index:200;background:rgba(4,10,8,.97);
+  border:1px solid var(--border);border-radius:10px;
+  padding:8px 12px;font-size:11px;pointer-events:none;
+  opacity:0;transition:opacity .15s;max-width:200px;line-height:1.5;
+}
+#tooltip.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="htitle">🧬 Árbol Evolutivo — Genesis</div>
+  <div class="hstat">Total: <span id="speciesCount">—</span> especies</div>
+  <div class="hstat">Ramas: <span>13</span> linajes</div>
+  <div class="spacer"></div>
+  <button class="hbtn" id="btnReset">⟳ Centrar</button>
+  <button class="hbtn" id="btnZoomIn">+</button>
+  <button class="hbtn" id="btnZoomOut">−</button>
+</div>
+
+<div id="filterBar">
+  <div class="filter-chip active" data-f="all">Todos</div>
+  <div class="filter-chip" data-f="amphibian">🐟 Anfibios</div>
+  <div class="filter-chip" data-f="reptile">🦎 Reptiles</div>
+  <div class="filter-chip" data-f="dinosaur">🦕 Dinosaurios</div>
+  <div class="filter-chip" data-f="mammal">🐾 Mamíferos</div>
+  <div class="filter-chip" data-f="bird">🦅 Aves</div>
+  <div class="filter-chip" data-f="aquatic">🐋 Acuáticos</div>
+  <div class="filter-chip" data-f="intelligent">🧠 Inteligentes</div>
+  <div class="filter-chip" data-f="insect">🦋 Artrópodos</div>
+</div>
+
+<canvas id="treeCanvas"></canvas>
+
+<div id="detailPanel">
+  <div class="dp-empty">
+    <div class="dp-icon">🧬</div>
+    <div>Haz clic en una especie para ver sus detalles, genes y descendientes</div>
+  </div>
+</div>
+
+<div id="legend">
+  <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Leyenda</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#22d3ee"></div>Anfibios</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#4ade80"></div>Reptiles</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#ef4444"></div>Dinosaurios</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#f59e0b"></div>Aves</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#a78bfa"></div>Mamíferos</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#0ea5e9"></div>Acuáticos</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#fb923c"></div>Inteligentes</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#84cc16"></div>Artrópodos</div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  THE 150-SPECIES EVOLUTIONARY TREE
+// ══════════════════════════════════════════════════════════════
+// Genes: size(0-1), speed, cold, heat, aquatic, intel, repro, armor, stealth, social
+// Category: amphibian | reptile | dinosaur | mammal | bird | aquatic | intelligent | insect
+// biomes: array of preferred biome names
+// unlockCond: { pop, year, climate, biome, gene }
+
+const SPECIES = [
+
+// ════════════════════════════════════════
+//  TIER 0 — THE 5 STARTING AMPHIBIANS
+// ════════════════════════════════════════
+{id:'glypthar',   name:'Glypthar',   tier:0, cat:'amphibian', parent:null,
+ icon:'🐟', color:'#22d3ee',
+ type:'Anfibio primitivo acuático',
+ desc:'El ser más primitivo. Vive pegado al agua, respira por branquias rudimentarias. Base de toda la vida terrestre.',
+ biomes:['Playa','Pantano','Jungla'],
+ genes:{size:.15,speed:.3,cold:.2,heat:.25,aquatic:.9,intel:.05,repro:.95,armor:.1,stealth:.4,social:.1},
+ unlockCond:null,
+ children:['vorrkai','aqueln','terrek','marvosh'],
+ lore:'Del cieno primordial emerge el Glypthar. En sus genes yace el código de todo lo que vendrá.'
+},
+{id:'pyrrak',     name:'Pyrrak',     tier:0, cat:'amphibian', parent:null,
+ icon:'🔥', color:'#fb923c',
+ type:'Anfibio volcánico primitivo',
+ desc:'Surge de zonas geotérmicas. Resiste temperaturas extremas desde el inicio. Evoluciona más rápido bajo calor.',
+ biomes:['Desierto','Playa volcánica','Pradera árida'],
+ genes:{size:.2,speed:.25,cold:.05,heat:.85,aquatic:.6,intel:.08,repro:.85,armor:.3,stealth:.2,social:.15},
+ unlockCond:null,
+ children:['ignarek','sulphyn','lavamur'],
+ lore:'La tierra arde y el Pyrrak nace de ella. Su sangre corre caliente como la lava.'
+},
+{id:'cryophis',   name:'Cryophis',   tier:0, cat:'amphibian', parent:null,
+ icon:'❄️', color:'#bfdbfe',
+ type:'Anfibio polar primitivo',
+ desc:'Adaptado al frío desde el principio. Metabolismo lento pero eficiente. Base de los linajes árticos.',
+ biomes:['Tundra','Montaña nevada','Bosque frío'],
+ genes:{size:.18,speed:.2,cold:.88,heat:.05,aquatic:.7,intel:.1,repro:.8,armor:.25,stealth:.5,social:.2},
+ unlockCond:null,
+ children:['frigorak','glacivyr','permast'],
+ lore:'El Cryophis es el primero en sobrevivir el invierno eterno. Sus descendientes dominarán los polos.'
+},
+{id:'sylveth',    name:'Sylveth',    tier:0, cat:'amphibian', parent:null,
+ icon:'🌿', color:'#86efac',
+ type:'Anfibio forestal primitivo',
+ desc:'Vive en la espesura húmeda. Excelente camuflaje innato. Base de los linajes forestales y sigilosos.',
+ biomes:['Jungla','Bosque','Pantano'],
+ genes:{size:.12,speed:.45,cold:.3,heat:.4,aquatic:.65,intel:.12,repro:.9,armor:.05,stealth:.85,social:.25},
+ unlockCond:null,
+ children:['vorrkai','arborek','selphyn','sylmark'],
+ lore:'El Sylveth se funde con el bosque. Nadie lo ve venir. Nadie lo verá ir.'
+},
+{id:'deepsyn',    name:'Deepsyn',    tier:0, cat:'amphibian', parent:null,
+ icon:'🌊', color:'#0369a1',
+ type:'Anfibio abisal primitivo',
+ desc:'Vive en aguas profundas. Mayor inteligencia primitiva de los anfibios iniciales. Base de los linajes marinos inteligentes.',
+ biomes:['Océano profundo','Playa','Pantano costero'],
+ genes:{size:.25,speed:.35,cold:.5,heat:.2,aquatic:.98,intel:.2,repro:.75,armor:.2,stealth:.6,social:.4},
+ unlockCond:null,
+ children:['aqueln','marphyn','cetalyn','abysshar'],
+ lore:'En las profundidades donde no llega la luz, el Deepsyn sueña con la superficie.'
+},
+
+// ════════════════════════════════════════
+//  TIER 1 — EARLY DIVERGENCE
+// ════════════════════════════════════════
+{id:'vorrkai',    name:'Vorrkai',    tier:1, cat:'reptile',   parent:'glypthar',
+ icon:'🦎', color:'#4ade80',
+ type:'Reptil terrestre primario',
+ desc:'Primer paso fuera del agua. Piel escamosa, pulmones desarrollados. Adaptable a terrenos secos.',
+ biomes:['Pradera','Bosque','Jungla'],
+ genes:{size:.3,speed:.5,cold:.2,heat:.55,aquatic:.2,intel:.18,repro:.8,armor:.3,stealth:.3,social:.2},
+ unlockCond:{pop:60},
+ children:['drakmur','umbrath','kordavar','reptann'],
+ lore:'El Vorrkai da sus primeros pasos en tierra firme. El mundo es suyo.'
+},
+{id:'aqueln',     name:'Aqueln',     tier:1, cat:'aquatic',   parent:'glypthar',
+ icon:'🐊', color:'#06b6d4',
+ type:'Anfibio acuático avanzado',
+ desc:'Se especializa en el agua. Extremidades palmeadas, cuerpo aerodinámico. Domina ríos y costas.',
+ biomes:['Océano','Playa','Pantano','Río'],
+ genes:{size:.38,speed:.42,cold:.28,heat:.3,aquatic:.95,intel:.14,repro:.82,armor:.22,stealth:.4,social:.3},
+ unlockCond:{pop:60},
+ children:['marphyn','selphyn','crocodyn','riveth'],
+ lore:'El Aqueln abraza el agua con todo su ser. Sus pies nunca volverán a tocar tierra seca.'
+},
+{id:'terrek',     name:'Terrek',     tier:1, cat:'reptile',   parent:'glypthar',
+ icon:'🐢', color:'#65a30d',
+ type:'Reptil acorazado primario',
+ desc:'Desarrolla un proto-caparazón desde temprano. Lento pero casi invulnerable. Muy longevo.',
+ biomes:['Pradera','Desierto','Playa'],
+ genes:{size:.4,speed:.15,cold:.4,heat:.45,aquatic:.3,intel:.12,repro:.5,armor:.85,stealth:.1,social:.15},
+ unlockCond:{pop:60},
+ children:['keldrix','testudar','shellmax'],
+ lore:'El Terrek lleva su casa en la espalda. Nada le apresura. Nada le detiene.'
+},
+{id:'marvosh',    name:'Marvosh',    tier:1, cat:'reptile',   parent:'glypthar',
+ icon:'🦕', color:'#a3e635',
+ type:'Reptil de gran tamaño primario',
+ desc:'Crece rápido y mucho. Los primeros gigantes. Base de todos los linajes de megafauna.',
+ biomes:['Pradera','Jungla','Bosque'],
+ genes:{size:.72,speed:.28,cold:.22,heat:.5,aquatic:.18,intel:.1,repro:.35,armor:.5,stealth:.05,social:.2},
+ unlockCond:{pop:60},
+ children:['tyranak','velshir','saurophor','titanark'],
+ lore:'El Marvosh sacude la tierra con cada paso. Los demás aprenden a apartarse.'
+},
+{id:'ignarek',    name:'Ignarek',    tier:1, cat:'reptile',   parent:'pyrrak',
+ icon:'🔥', color:'#dc2626',
+ type:'Reptil volcánico depredador',
+ desc:'Depredador nato de zonas áridas y volcánicas. Piel ignífuga, garras largas.',
+ biomes:['Desierto','Pradera árida','Zona volcánica'],
+ genes:{size:.55,speed:.6,cold:.05,heat:.92,aquatic:.05,intel:.22,repro:.45,armor:.55,stealth:.3,social:.15},
+ unlockCond:{pop:50,climate:'Árido'},
+ children:['drakmur','pyronar','embrath','cinderax'],
+ lore:'El Ignarek nació en el fuego. Prefiere que sus presas también ardan.'
+},
+{id:'sulphyn',    name:'Sulphyn',    tier:1, cat:'amphibian', parent:'pyrrak',
+ icon:'🫧', color:'#fbbf24',
+ type:'Anfibio toxicógeno',
+ desc:'Secreta venenos de su piel. El primer ser que usa armas químicas. Base de los linajes venenosos.',
+ biomes:['Jungla','Pantano','Desierto'],
+ genes:{size:.2,speed:.38,cold:.1,heat:.7,aquatic:.55,intel:.2,repro:.85,armor:.08,stealth:.7,social:.2},
+ unlockCond:{pop:50},
+ children:['venomyx','toxaris','selphyn'],
+ lore:'Tocar al Sulphyn es el último error de muchos depredadores.'
+},
+{id:'lavamur',    name:'Lavamur',    tier:1, cat:'reptile',   parent:'pyrrak',
+ icon:'🌋', color:'#b45309',
+ type:'Reptil geotérmico',
+ desc:'Vive literalmente junto a volcanes activos. Piel endurecida por minerales. Resistencia extrema.',
+ biomes:['Zona volcánica','Desierto','Montaña'],
+ genes:{size:.48,speed:.3,cold:.05,heat:.98,aquatic:.1,intel:.15,repro:.4,armor:.75,stealth:.1,social:.1},
+ unlockCond:{pop:45,biome:'Zona volcánica'},
+ children:['gorathex','cinderax'],
+ lore:'El Lavamur camina donde otros mueren. La roca fundida es su hogar.'
+},
+{id:'frigorak',   name:'Frigorak',   tier:1, cat:'reptile',   parent:'cryophis',
+ icon:'🧊', color:'#7dd3fc',
+ type:'Reptil ártico primario',
+ desc:'Primer reptil adaptado al frío extremo. Sangre anticongelante. Domina las tundras.',
+ biomes:['Tundra','Montaña nevada','Bosque frío'],
+ genes:{size:.35,speed:.35,cold:.9,heat:.05,aquatic:.3,intel:.15,repro:.65,armor:.4,stealth:.45,social:.25},
+ unlockCond:{pop:50,climate:'Frío'},
+ children:['velmori','glacivyr','permast','kryonak'],
+ lore:'El Frigorak no tiembla. El frío no es su enemigo. Es su hogar.'
+},
+{id:'glacivyr',   name:'Glacivyr',   tier:1, cat:'aquatic',   parent:'cryophis',
+ icon:'🐟', color:'#bae6fd',
+ type:'Pez polar primitivo',
+ desc:'Se especializa en aguas heladas. Primer pez de sangre fría que prospera bajo el hielo.',
+ biomes:['Océano polar','Lago helado','Río ártico'],
+ genes:{size:.28,speed:.55,cold:.95,heat:.02,aquatic:.99,intel:.12,repro:.78,armor:.15,stealth:.5,social:.35},
+ unlockCond:{pop:45,biome:'Océano polar'},
+ children:['cetalyn','abysshar','polarcet'],
+ lore:'Bajo el hielo, el Glacivyr encuentra un mundo propio donde nadie más puede llegar.'
+},
+{id:'permast',    name:'Permast',    tier:1, cat:'mammal',    parent:'cryophis',
+ icon:'🦣', color:'#94a3b8',
+ type:'Proto-mamífero polar',
+ desc:'Primer ser de sangre caliente que surge del frío. Pelo rudimentario, termorregulación activa.',
+ biomes:['Tundra','Montaña','Bosque frío'],
+ genes:{size:.5,speed:.4,cold:.85,heat:.15,aquatic:.15,intel:.3,repro:.55,armor:.35,stealth:.3,social:.45},
+ unlockCond:{pop:55,year:20},
+ children:['velmori','mammark','kryonak'],
+ lore:'El Permast descubre el calor que viene desde adentro. Esta será la ventaja de los mamíferos.'
+},
+{id:'arborek',    name:'Arborek',    tier:1, cat:'reptile',   parent:'sylveth',
+ icon:'🦎', color:'#16a34a',
+ type:'Reptil arbóreo',
+ desc:'Trepa árboles con facilidad. Cambia de color para camuflarse. El primer depredador de las alturas forestales.',
+ biomes:['Jungla','Bosque','Selva tropical'],
+ genes:{size:.22,speed:.65,cold:.25,heat:.5,aquatic:.15,intel:.25,repro:.75,armor:.12,stealth:.88,social:.2},
+ unlockCond:{pop:55,biome:'Jungla'},
+ children:['sylmark','arcanid','leafcrawl'],
+ lore:'El Arborek vive en el dosel forestal. Desde arriba, todo le pertenece.'
+},
+{id:'sylmark',    name:'Sylmark',    tier:1, cat:'amphibian', parent:'sylveth',
+ icon:'🐸', color:'#4ade80',
+ type:'Anfibio forestal saltador',
+ desc:'Gran capacidad de salto. Vive entre ramas. Primer ser que usa el sonido como comunicación compleja.',
+ biomes:['Jungla','Bosque','Pantano forestal'],
+ genes:{size:.18,speed:.7,cold:.3,heat:.38,aquatic:.6,intel:.28,repro:.88,armor:.06,stealth:.65,social:.55},
+ unlockCond:{pop:50},
+ children:['selphyn','resonar','choreph'],
+ lore:'El Sylmark no camina. Salta. Y cuando habla, todo el bosque escucha.'
+},
+{id:'marphyn',    name:'Marphyn',    tier:1, cat:'aquatic',   parent:'deepsyn',
+ icon:'🐋', color:'#0284c7',
+ type:'Pez-mamífero primitivo',
+ desc:'Grande, lento, inteligente para su época. Domina mares cálidos. Primer ser marino con memoria a largo plazo.',
+ biomes:['Océano','Mar cálido','Playa'],
+ genes:{size:.78,speed:.22,cold:.38,heat:.5,aquatic:.98,intel:.32,repro:.28,armor:.48,stealth:.12,social:.5},
+ unlockCond:{pop:65,year:20},
+ children:['leviath','cetalyn','delphark'],
+ lore:'El Marphyn recuerda. Y lo que recuerda, lo enseña a sus crías.'
+},
+{id:'cetalyn',    name:'Cetalyn',    tier:1, cat:'aquatic',   parent:'deepsyn',
+ icon:'🐬', color:'#38bdf8',
+ type:'Cetáceo primitivo ágil',
+ desc:'Rápido y social. Caza en grupo. El primer ser marino con estructura social compleja.',
+ biomes:['Océano','Mar tropical','Costa'],
+ genes:{size:.5,speed:.75,cold:.42,heat:.45,aquatic:.97,intel:.45,repro:.45,armor:.22,stealth:.35,social:.78},
+ unlockCond:{pop:60,year:18},
+ children:['delphark','sonaryn','intellcet'],
+ lore:'Los Cetalyn hablan con sonidos que viajan kilómetros. Ya son una sociedad.'
+},
+{id:'abysshar',   name:'Abysshar',   tier:1, cat:'aquatic',   parent:'deepsyn',
+ icon:'🦑', color:'#1e3a5f',
+ type:'Ser abisal misterioso',
+ desc:'Vive en las profundidades absolutas. Bioluminiscente. Inteligencia extraña, distinta a cualquier otra.',
+ biomes:['Océano abisal','Fosa oceánica'],
+ genes:{size:.45,speed:.4,cold:.65,heat:.1,aquatic:.99,intel:.55,repro:.35,armor:.3,stealth:.9,social:.25},
+ unlockCond:{pop:40,biome:'Océano profundo'},
+ children:['sonaryn','abyssking'],
+ lore:'El Abysshar piensa pensamientos que ningún ser terrestre comprenderá nunca.'
+},
+
+// ════════════════════════════════════════
+//  TIER 2 — MAJOR LINEAGES
+// ════════════════════════════════════════
+{id:'drakmur',    name:'Drakmur',    tier:2, cat:'reptile',   parent:'vorrkai',
+ icon:'🐉', color:'#ef4444',
+ type:'Reptil depredador ápex',
+ desc:'El primer gran depredador terrestre. Mandíbulas poderosas, instinto cazador refinado.',
+ biomes:['Pradera','Desierto','Bosque'],
+ genes:{size:.68,speed:.58,cold:.22,heat:.72,aquatic:.05,intel:.28,repro:.32,armor:.62,stealth:.25,social:.18},
+ unlockCond:{pop:120,year:25},
+ children:['tyranak','velshir','raptorak','fangmur'],
+ lore:'El Drakmur huele el miedo. Y el miedo le guía a su presa.'
+},
+{id:'umbrath',    name:'Umbrath',    tier:2, cat:'reptile',   parent:'vorrkai',
+ icon:'🦔', color:'#a78bfa',
+ type:'Reptil excavador nocturno',
+ desc:'Vive bajo tierra. Evita depredadores y calor. Alta reproductividad. Base de los linajes subterráneos.',
+ biomes:['Pradera','Bosque','Tundra'],
+ genes:{size:.22,speed:.28,cold:.68,heat:.22,aquatic:.08,intel:.22,repro:.95,armor:.42,stealth:.75,social:.3},
+ unlockCond:{pop:100,year:22},
+ children:['morvath','keldrix','tunnark','blindmole'],
+ lore:'El Umbrath nunca ve el sol. Y no lo necesita.'
+},
+{id:'kordavar',   name:'Kordavar',   tier:2, cat:'reptile',   parent:'vorrkai',
+ icon:'🦖', color:'#84cc16',
+ type:'Reptil herbívoro grande',
+ desc:'Herbívoro de gran tamaño. Vive en manadas. Primera especie con comportamiento verdaderamente social.',
+ biomes:['Pradera','Bosque','Sabana'],
+ genes:{size:.65,speed:.38,cold:.3,heat:.48,aquatic:.12,intel:.2,repro:.48,armor:.38,stealth:.08,social:.72},
+ unlockCond:{pop:110,year:24},
+ children:['saurophor','pachydar','kordking'],
+ lore:'El Kordavar no caza. Pero en manada, nada le caza a él.'
+},
+{id:'reptann',    name:'Reptann',    tier:2, cat:'reptile',   parent:'vorrkai',
+ icon:'🦎', color:'#22c55e',
+ type:'Reptil omnívoro adaptable',
+ desc:'El más flexible de los reptiles. Come de todo, vive en casi cualquier lugar. Evoluciona con inusual velocidad.',
+ biomes:['Pradera','Bosque','Jungla','Desierto'],
+ genes:{size:.35,speed:.52,cold:.38,heat:.52,aquatic:.25,intel:.32,repro:.72,armor:.25,stealth:.42,social:.38},
+ unlockCond:{pop:90,year:20},
+ children:['zylthari','evolvar','komoran'],
+ lore:'El Reptann no es el más fuerte ni el más rápido. Pero siempre encuentra la manera.'
+},
+{id:'crocodyn',   name:'Crocodyn',   tier:2, cat:'aquatic',   parent:'aqueln',
+ icon:'🐊', color:'#15803d',
+ type:'Cocodrílido primitivo',
+ desc:'Emboscador acuático letal. Paciencia infinita. Domina la frontera entre agua y tierra.',
+ biomes:['Río','Pantano','Delta'],
+ genes:{size:.72,speed:.35,cold:.28,heat:.62,aquatic:.85,intel:.2,repro:.42,armor:.78,stealth:.72,social:.15},
+ unlockCond:{pop:100,year:22},
+ children:['megacroc','riverking'],
+ lore:'El Crocodyn lleva millones de años sin cambiar. No necesita cambiar.'
+},
+{id:'riveth',     name:'Riveth',     tier:2, cat:'aquatic',   parent:'aqueln',
+ icon:'🐟', color:'#0891b2',
+ type:'Pez fluvial veloz',
+ desc:'Maestro de las corrientes. Nada contra cualquier río. Base de los peces de agua dulce.',
+ biomes:['Río','Lago','Cascada'],
+ genes:{size:.22,speed:.88,cold:.42,heat:.35,aquatic:.96,intel:.15,repro:.82,armor:.12,stealth:.45,social:.42},
+ unlockCond:{pop:85,year:18},
+ children:['silverfin','leapfish','riverkin'],
+ lore:'El Riveth sigue el río. El río le lleva al océano. El océano le lleva al mundo.'
+},
+{id:'keldrix',    name:'Keldrix',    tier:2, cat:'reptile',   parent:'terrek',
+ icon:'🐢', color:'#4d7c0f',
+ type:'Tortuga acorazada avanzada',
+ desc:'Caparazón casi impenetrable. Longeva. El primer ser que supera los 100 años de vida.',
+ biomes:['Pradera','Playa','Bosque','Tundra'],
+ genes:{size:.48,speed:.12,cold:.62,heat:.42,aquatic:.28,intel:.18,repro:.38,armor:.96,stealth:.08,social:.12},
+ unlockCond:{pop:80,year:25},
+ children:['testudar','shellmax','ancientone'],
+ lore:'El Keldrix ha visto pasar eras. Su caparazón guarda las cicatrices de todas ellas.'
+},
+{id:'testudar',   name:'Testudar',   tier:2, cat:'reptile',   parent:'terrek',
+ icon:'🐢', color:'#365314',
+ type:'Tortuga gigante',
+ desc:'Enormes dimensiones. Vive en islas. Fuente de sabiduría para futuras especies inteligentes.',
+ biomes:['Isla tropical','Playa','Bosque insular'],
+ genes:{size:.82,speed:.08,cold:.3,heat:.58,aquatic:.42,intel:.22,repro:.25,armor:.92,stealth:.04,social:.18},
+ unlockCond:{pop:70,year:30,biome:'Isla'},
+ children:['shellmax','ancientone'],
+ lore:'El Testudar no tiene prisa. El tiempo trabaja para él.'
+},
+{id:'tyranak',    name:'Tyranak',    tier:2, cat:'dinosaur',  parent:'marvosh',
+ icon:'🦕', color:'#dc2626',
+ type:'Dinosaurio bípedo ápex',
+ desc:'El mayor depredador de su era. Bípedo, con mandíbulas devastadoras. Domina praderas y junglas.',
+ biomes:['Pradera','Jungla','Sabana'],
+ genes:{size:.95,speed:.52,cold:.18,heat:.78,aquatic:.02,intel:.28,repro:.18,armor:.72,stealth:.1,social:.15},
+ unlockCond:{pop:180,year:50},
+ children:['gorathex','tyranking','titanark'],
+ lore:'Cuando el Tyranak ruge, el mundo calla.'
+},
+{id:'velshir',    name:'Velshir',    tier:2, cat:'dinosaur',  parent:'marvosh',
+ icon:'🦖', color:'#f97316',
+ type:'Dinosaurio rápido en manada',
+ desc:'Pequeño y velocísimo. Caza en manada coordinada. El primero con señales vocales complejas.',
+ biomes:['Pradera','Bosque','Jungla'],
+ genes:{size:.42,speed:.92,cold:.28,heat:.65,aquatic:.02,intel:.48,repro:.52,armor:.28,stealth:.38,social:.75},
+ unlockCond:{pop:170,year:48},
+ children:['kyravel','raptorak','packmaster'],
+ lore:'Solo, el Velshir es peligroso. En manada, es invencible.'
+},
+{id:'saurophor',  name:'Saurophor',  tier:2, cat:'dinosaur',  parent:'marvosh',
+ icon:'🦕', color:'#78350f',
+ type:'Saurópodo cuello largo',
+ desc:'Cuello larguísimo, accede a vegetación inaccesible para otros. Colosal y pacífico.',
+ biomes:['Pradera','Bosque','Sabana'],
+ genes:{size:.98,speed:.18,cold:.25,heat:.52,aquatic:.15,intel:.15,repro:.22,armor:.55,stealth:.02,social:.55},
+ unlockCond:{pop:160,year:45},
+ children:['titanark','giantherb'],
+ lore:'El Saurophor alcanza el cielo con su cuello. El cielo le responde con hojas.'
+},
+{id:'morvath',    name:'Morvath',    tier:2, cat:'mammal',    parent:'umbrath',
+ icon:'🦇', color:'#7c3aed',
+ type:'Proto-mamífero nocturno',
+ desc:'Primer mamífero real con sangre caliente. Activo de noche. Ecolocalización rudimentaria.',
+ biomes:['Bosque','Cueva','Montaña'],
+ genes:{size:.18,speed:.68,cold:.72,heat:.28,aquatic:.05,intel:.52,repro:.68,armor:.12,stealth:.82,social:.42},
+ unlockCond:{pop:150,year:45},
+ children:['zylthari','velmori','bathrex','chiropt'],
+ lore:'El Morvath duerme de día y conquista la noche. La oscuridad no le da miedo.'
+},
+{id:'venomyx',    name:'Venomyx',    tier:2, cat:'reptile',   parent:'sulphyn',
+ icon:'🐍', color:'#f59e0b',
+ type:'Serpiente venenosa primitiva',
+ desc:'Sin extremidades. Se mueve en silencio total. Veneno paralizante. El primer asesino silencioso.',
+ biomes:['Jungla','Desierto','Pradera','Bosque'],
+ genes:{size:.3,speed:.55,cold:.2,heat:.65,aquatic:.35,intel:.2,repro:.75,armor:.08,stealth:.95,social:.05},
+ unlockCond:{pop:120,year:30},
+ children:['toxaris','constrikr','kraythen'],
+ lore:'El Venomyx no necesita piernas. La tierra entera es su cuerpo.'
+},
+{id:'toxaris',    name:'Toxaris',    tier:2, cat:'amphibian', parent:'sulphyn',
+ icon:'🐸', color:'#eab308',
+ type:'Anfibio dardo venenoso',
+ desc:'Colores brillantes como advertencia. Veneno letal. Las futuras especies aprenden a respetarlo.',
+ biomes:['Jungla','Pantano','Selva tropical'],
+ genes:{size:.12,speed:.42,cold:.18,heat:.62,aquatic:.58,intel:.22,repro:.88,armor:.02,stealth:.15,social:.28},
+ unlockCond:{pop:100,year:28},
+ children:['chromafrog','bioweapon'],
+ lore:'Sus colores gritan: soy veneno. Es el único que no necesita esconderse.'
+},
+{id:'leviath',    name:'Leviath',    tier:2, cat:'aquatic',   parent:'marphyn',
+ icon:'🐳', color:'#075985',
+ type:'Leviatán oceánico colosal',
+ desc:'El mayor ser marino de la historia. Inteligencia emergente. Sus canciones se escuchan a cientos de kilómetros.',
+ biomes:['Océano profundo','Mar abierto'],
+ genes:{size:.99,speed:.18,cold:.68,heat:.32,aquatic:.99,intel:.58,repro:.12,armor:.65,stealth:.08,social:.55},
+ unlockCond:{pop:100,year:50},
+ children:['abyssking','intellcet','leviking'],
+ lore:'El Leviath canta y el océano responde. Nadie sabe qué dice, pero todos escuchan.'
+},
+{id:'delphark',   name:'Delphark',   tier:2, cat:'aquatic',   parent:'cetalyn',
+ icon:'🐬', color:'#0ea5e9',
+ type:'Delfínido primitivo inteligente',
+ desc:'Altamente social e inteligente. Usa herramientas marinas rudimentarias. Juega. El primero en jugar.',
+ biomes:['Océano','Costa','Laguna'],
+ genes:{size:.42,speed:.82,cold:.45,heat:.48,aquatic:.97,intel:.68,repro:.48,armor:.18,stealth:.28,social:.88},
+ unlockCond:{pop:120,year:40},
+ children:['intellcet','sonaryn','marfolk'],
+ lore:'El Delphark juega. En el juego aprende. En el aprendizaje evoluciona.'
+},
+{id:'velmori',    name:'Velmori',    tier:2, cat:'mammal',    parent:'frigorak',
+ icon:'🐺', color:'#cbd5e1',
+ type:'Mamífero ártico cazador en manada',
+ desc:'Pelo denso, caza cooperativa en grupos. Primer ser con jerarquía social compleja y roles definidos.',
+ biomes:['Tundra','Bosque frío','Montaña nevada'],
+ genes:{size:.52,speed:.72,cold:.92,heat:.18,aquatic:.12,intel:.62,repro:.45,armor:.28,stealth:.52,social:.82},
+ unlockCond:{pop:130,year:42},
+ children:['wolfking','mammavar','packmaster'],
+ lore:'El Velmori solo es un lobo. El Velmori en manada es una leyenda.'
+},
+{id:'zylthari',   name:'Zylthari',   tier:2, cat:'mammal',    parent:'reptann',
+ icon:'🦊', color:'#fb923c',
+ type:'Mamífero omnívoro social',
+ desc:'Usa herramientas rudimentarias. Vive en grupos con jerarquía. El despertar de la conciencia.',
+ biomes:['Bosque','Pradera','Costa'],
+ genes:{size:.38,speed:.58,cold:.48,heat:.52,aquatic:.18,intel:.78,repro:.52,armor:.18,stealth:.38,social:.72},
+ unlockCond:{pop:140,year:45},
+ children:['narvek','syndari','zyltking','cunning'],
+ lore:'El Zylthari recuerda el pasado y planea el futuro. Nadie más hace eso todavía.'
+},
+{id:'selphyn',    name:'Selphyn',    tier:2, cat:'amphibian', parent:'aqueln',
+ icon:'🐸', color:'#34d399',
+ type:'Anfibio omnívoro adaptable',
+ desc:'Vuelve parcialmente a tierra con nuevas capacidades. Muy adaptable. El más versátil.',
+ biomes:['Pantano','Bosque','Playa','Jungla'],
+ genes:{size:.28,speed:.62,cold:.38,heat:.42,aquatic:.62,intel:.38,repro:.82,armor:.18,stealth:.55,social:.45},
+ unlockCond:{pop:110,year:28},
+ children:['zylthari','pyronar','resonar','mudcrawl'],
+ lore:'El Selphyn pertenece a dos mundos. Y en ninguno es débil.'
+},
+{id:'pyronar',    name:'Pyronar',    tier:2, cat:'bird',      parent:'ignarek',
+ icon:'🦅', color:'#fbbf24',
+ type:'Ave depredadora primitiva',
+ desc:'Primer ser alado. Domina los cielos cálidos. Los demás miran hacia arriba con miedo.',
+ biomes:['Montaña','Desierto','Pradera','Zona volcánica'],
+ genes:{size:.42,speed:.95,cold:.38,heat:.72,aquatic:.05,intel:.42,repro:.42,armor:.22,stealth:.32,social:.28},
+ unlockCond:{pop:150,year:48},
+ children:['stryxar','kyravel','eagleking','thermalr'],
+ lore:'El Pyronar vuela donde otros no pueden respirar. El cielo es su coto de caza.'
+},
+
+// ════════════════════════════════════════
+//  TIER 3 — ADVANCED SPECIES
+// ════════════════════════════════════════
+{id:'gorathex',   name:'Gorathex',   tier:3, cat:'dinosaur',  parent:'tyranak',
+ icon:'🦏', color:'#b91c1c',
+ type:'Dinosaurio acorazado alfa',
+ desc:'Fusión perfecta de fuerza bruta y armadura. El rey indiscutible de su era.',
+ biomes:['Pradera','Desierto','Jungla'],
+ genes:{size:.99,speed:.28,cold:.22,heat:.82,aquatic:.02,intel:.32,repro:.14,armor:.97,stealth:.04,social:.12},
+ unlockCond:{pop:280,year:90},
+ children:['tyranking','endosaur'],
+ lore:'El Gorathex no conoce rivales. Solo conoce victorias.'
+},
+{id:'kyravel',    name:'Kyravel',    tier:3, cat:'bird',      parent:'velshir',
+ icon:'🦜', color:'#ea580c',
+ type:'Ave-dinosaurio plumada',
+ desc:'Plumas proto-ala. Inteligencia elevada. Primer ser con lenguaje vocal complejo de más de 50 señales.',
+ biomes:['Bosque','Jungla','Montaña'],
+ genes:{size:.32,speed:.88,cold:.48,heat:.62,aquatic:.02,intel:.62,repro:.48,armor:.18,stealth:.35,social:.65},
+ unlockCond:{pop:240,year:85},
+ children:['stryxar','eagleking','kraven'],
+ lore:'El Kyravel habla con palabras. Pocas, pero palabras.'
+},
+{id:'narvek',     name:'Narvek',     tier:3, cat:'mammal',    parent:'zylthari',
+ icon:'🐒', color:'#92400e',
+ type:'Primate primitivo bípedo',
+ desc:'Bípedo ocasional. Lenguaje de señas. Usa piedra y palo como herramientas básicas.',
+ biomes:['Jungla','Bosque','Montaña'],
+ genes:{size:.42,speed:.55,cold:.42,heat:.55,aquatic:.1,intel:.85,repro:.48,armor:.12,stealth:.3,social:.78},
+ unlockCond:{pop:200,year:80},
+ children:['syndari','hominar','narvking'],
+ lore:'El Narvek se pone en pie. Y desde allí ve más lejos que ninguno.'
+},
+{id:'syndari',    name:'Syndari',    tier:3, cat:'intelligent',parent:'narvek',
+ icon:'🧠', color:'#7c3aed',
+ type:'Homínido pensante',
+ desc:'Fuego, lenguaje, memoria colectiva. El umbral de la civilización. El primero que pregunta "por qué".',
+ biomes:['Pradera','Bosque','Costa','Montaña'],
+ genes:{size:.48,speed:.48,cold:.58,heat:.58,aquatic:.14,intel:.96,repro:.44,armor:.1,stealth:.28,social:.88},
+ unlockCond:{pop:230,year:95},
+ children:['civitas','nomadyn','syndking'],
+ lore:'El Syndari enciende el primer fuego. En ese instante, el mundo cambia para siempre.'
+},
+{id:'stryxar',    name:'Stryxar',    tier:3, cat:'bird',      parent:'kyravel',
+ icon:'🦢', color:'#d97706',
+ type:'Ave inteligente social',
+ desc:'Construye nidos comunales. Transmite conocimiento entre generaciones. El primer ser con cultura.',
+ biomes:['Pradera','Bosque','Costa','Montaña'],
+ genes:{size:.38,speed:.82,cold:.52,heat:.55,aquatic:.12,intel:.72,repro:.38,armor:.14,stealth:.22,social:.85},
+ unlockCond:{pop:220,year:88},
+ children:['eagleking','stryxking','skyciv'],
+ lore:'El Stryxar construye nidos. Y en ellos, guarda sabiduría.'
+},
+{id:'intellcet',  name:'Intellcet',  tier:3, cat:'intelligent',parent:'delphark',
+ icon:'🐬', color:'#0284c7',
+ type:'Cetáceo pensante',
+ desc:'Inteligencia comparable a los primates. Usa ecolocalización como lenguaje matemático. Civilización marina.',
+ biomes:['Océano','Laguna','Mar tropical'],
+ genes:{size:.55,speed:.78,cold:.48,heat:.52,aquatic:.99,intel:.88,repro:.35,armor:.22,stealth:.3,social:.92},
+ unlockCond:{pop:180,year:85},
+ children:['marfolk','aquaciv','oceanting'],
+ lore:'Los Intellcet han creado una civilización sin manos. El océano es su biblioteca.'
+},
+{id:'wolfking',   name:'Wolfking',   tier:3, cat:'mammal',    parent:'velmori',
+ icon:'🐺', color:'#475569',
+ type:'Lobo alfa inteligente',
+ desc:'Manadas con jerarquía compleja, división de roles, enseñanza activa a cachorros. Al borde de la inteligencia.',
+ biomes:['Tundra','Bosque frío','Montaña','Pradera'],
+ genes:{size:.6,speed:.78,cold:.95,heat:.22,aquatic:.15,intel:.72,repro:.42,armor:.32,stealth:.58,social:.9},
+ unlockCond:{pop:200,year:82},
+ children:['packmaster','wolvring','wolfciv'],
+ lore:'El Wolfking no da órdenes. Las sugiere. Y todos le siguen.'
+},
+{id:'mammavar',   name:'Mammavar',   tier:3, cat:'mammal',    parent:'velmori',
+ icon:'🦣', color:'#78716c',
+ type:'Mamut inteligente primitivo',
+ desc:'Enorme, de sangre caliente y con una memoria prodigiosa. Primer ser que entierra a sus muertos.',
+ biomes:['Tundra','Pradera fría','Estepa'],
+ genes:{size:.92,speed:.28,cold:.97,heat:.12,aquatic:.08,intel:.62,repro:.22,armor:.62,stealth:.04,social:.68},
+ unlockCond:{pop:180,year:78},
+ children:['mammking','tuskvar','elefint'],
+ lore:'El Mammavar recuerda dónde están enterrados sus ancestros. Y va a visitarlos.'
+},
+{id:'elefint',    name:'Elefint',    tier:3, cat:'intelligent',parent:'mammavar',
+ icon:'🐘', color:'#a8a29e',
+ type:'Elefántico pensante avanzado',
+ desc:'Trompa prensil para usar herramientas. Memoria perfecta. Enseñanza multigeneracional. Sociedad matriarcal.',
+ biomes:['Pradera','Sabana','Bosque cálido'],
+ genes:{size:.88,speed:.32,cold:.45,heat:.62,aquatic:.25,intel:.92,repro:.25,armor:.55,stealth:.05,social:.95},
+ unlockCond:{pop:220,year:90},
+ children:['elefking','probosciv','thinker'],
+ lore:'El Elefint recuerda todo. Todo. Y lo que no recuerda, lo aprende de su madre.'
+},
+{id:'sonaryn',    name:'Sonaryn',    tier:3, cat:'aquatic',   parent:'cetalyn',
+ icon:'🦈', color:'#1d4ed8',
+ type:'Ser marino con sonar avanzado',
+ desc:'Usa sonar como radar de precisión. Mapea el fondo oceánico. El primer cartógrafo del mundo.',
+ biomes:['Océano','Mar profundo','Costa'],
+ genes:{size:.48,speed:.85,cold:.52,heat:.42,aquatic:.98,intel:.75,repro:.38,armor:.28,stealth:.45,social:.62},
+ unlockCond:{pop:160,year:75},
+ children:['intellcet','oceanting','navikin'],
+ lore:'El Sonaryn conoce el fondo del mar mejor que ningún ser conoce la tierra.'
+},
+{id:'abyssking',  name:'Abyssking',  tier:3, cat:'intelligent',parent:'abysshar',
+ icon:'🦑', color:'#1e1b4b',
+ type:'Ser abisal de inteligencia única',
+ desc:'Inteligencia completamente distinta a la terrestre. Procesa información en paralelo. Incognoscible.',
+ biomes:['Océano abisal','Fosa oceánica'],
+ genes:{size:.65,speed:.38,cold:.72,heat:.08,aquatic:.99,intel:.94,repro:.25,armor:.35,stealth:.95,social:.18},
+ unlockCond:{pop:120,year:100,biome:'Océano abisal'},
+ children:['deepmind','abyssciv'],
+ lore:'Nadie sabe qué piensa el Abyssking. Quizás ni él mismo lo sabe.'
+},
+{id:'resonar',    name:'Resonar',    tier:3, cat:'amphibian', parent:'sylmark',
+ icon:'🎵', color:'#06b6d4',
+ type:'Anfibio sonoro comunicativo',
+ desc:'Comunica con ultrasonidos complejos. Primer ser con lenguaje abstracto. Enseña conceptos, no solo señales.',
+ biomes:['Jungla','Pantano','Bosque húmedo'],
+ genes:{size:.2,speed:.55,cold:.28,heat:.42,aquatic:.62,intel:.72,repro:.72,armor:.05,stealth:.48,social:.88},
+ unlockCond:{pop:160,year:65},
+ children:['choreph','amphibint','songkin'],
+ lore:'El Resonar no habla de peligro o comida. Habla de ideas.'
+},
+{id:'pachydar',   name:'Pachydar',   tier:3, cat:'mammal',    parent:'kordavar',
+ icon:'🦏', color:'#6b7280',
+ type:'Paquidermo primario',
+ desc:'Piel gruesa como armadura natural. Tamaño enorme. Tranquilo a menos que sea amenazado.',
+ biomes:['Pradera','Sabana','Bosque'],
+ genes:{size:.85,speed:.25,cold:.38,heat:.58,aquatic:.22,intel:.32,repro:.28,armor:.88,stealth:.04,social:.48},
+ unlockCond:{pop:180,year:72},
+ children:['elefint','rhinark','pachydking'],
+ lore:'El Pachydar no ataca primero. Pero si lo hace, es el último que ataca.'
+},
+{id:'megacroc',   name:'Megacroc',   tier:3, cat:'aquatic',   parent:'crocodyn',
+ icon:'🐊', color:'#064e3b',
+ type:'Megacocodrilo prehistórico',
+ desc:'Dimensiones colosales. Domina ríos enteros. Inmutable ante los cambios evolutivos. Perfecto.',
+ biomes:['Río grande','Delta','Pantano costero'],
+ genes:{size:.95,speed:.22,cold:.25,heat:.68,aquatic:.92,intel:.18,repro:.32,armor:.95,stealth:.65,social:.08},
+ unlockCond:{pop:150,year:70},
+ children:['riverking','crocking'],
+ lore:'El Megacroc es tan antiguo como el río. Y tan paciente como el tiempo.'
+},
+{id:'bathrex',    name:'Bathrex',    tier:3, cat:'mammal',    parent:'morvath',
+ icon:'🦇', color:'#4c1d95',
+ type:'Quiróptero grande depredador',
+ desc:'Envergadura enorme. Caza mamíferos pequeños. Ecolocalización perfecta. Terrorífico en la oscuridad.',
+ biomes:['Cueva','Bosque nocturno','Montaña'],
+ genes:{size:.38,speed:.88,cold:.55,heat:.35,aquatic:.05,intel:.48,repro:.52,armor:.18,stealth:.92,social:.38},
+ unlockCond:{pop:160,year:68},
+ children:['chiropt','nightkin','batking'],
+ lore:'El Bathrex nunca duerme mientras otros descansan. La noche le pertenece.'
+},
+
+// ════════════════════════════════════════
+//  TIER 4 — PROTO-INTELLIGENT & APEX
+// ════════════════════════════════════════
+{id:'civitas',    name:'Civitas',    tier:4, cat:'intelligent',parent:'syndari',
+ icon:'🏛️', color:'#6d28d9',
+ type:'Homínido civilizado primario',
+ desc:'Construye estructuras permanentes. Agricultura rudimentaria. El primer ser que modifica el mundo.',
+ biomes:['Pradera','Valle fértil','Costa'],
+ genes:{size:.5,speed:.45,cold:.62,heat:.62,aquatic:.18,intel:.98,repro:.42,armor:.08,stealth:.22,social:.95},
+ unlockCond:{pop:300,year:120},
+ children:['techsyn','arcanum'],
+ lore:'El Civitas planta la primera semilla. Ya no busca la comida. La crea.'
+},
+{id:'elefking',   name:'Elefking',   tier:4, cat:'intelligent',parent:'elefint',
+ icon:'🐘', color:'#d97706',
+ type:'Elefántico gobernante',
+ desc:'Lidera sociedades de cientos de individuos. Transmite leyes orales. La primera democracia primitiva.',
+ biomes:['Sabana','Pradera','Bosque cálido'],
+ genes:{size:.9,speed:.3,cold:.42,heat:.65,aquatic:.28,intel:.96,repro:.22,armor:.58,stealth:.04,social:.98},
+ unlockCond:{pop:280,year:115},
+ children:['probosciv','thinker'],
+ lore:'El Elefking no necesita gritar para gobernar. Solo necesita recordar.'
+},
+{id:'marfolk',    name:'Marfolk',    tier:4, cat:'intelligent',parent:'intellcet',
+ icon:'🧜', color:'#0369a1',
+ type:'Ser marino semi-terrestre inteligente',
+ desc:'Ha desarrollado extremidades primitivas para salir al tierra. Construye en zonas costeras. Civilización anfibia.',
+ biomes:['Costa','Playa','Laguna','Río'],
+ genes:{size:.52,speed:.62,cold:.48,heat:.52,aquatic:.82,intel:.92,repro:.38,armor:.25,stealth:.3,social:.88},
+ unlockCond:{pop:240,year:110},
+ children:['aquaciv','oceanting'],
+ lore:'El Marfolk mira la tierra y ve posibilidades. Mira el mar y ve su hogar.'
+},
+{id:'wolfciv',    name:'Wolfciv',    tier:4, cat:'intelligent',parent:'wolfking',
+ icon:'🐺', color:'#334155',
+ type:'Sociedad lobuna organizada',
+ desc:'Manadas de cientos con leyes, roles, rituales y territorios definidos por acuerdo. Política primitiva.',
+ biomes:['Tundra','Bosque','Montaña','Pradera fría'],
+ genes:{size:.62,speed:.75,cold:.97,heat:.25,aquatic:.18,intel:.88,repro:.38,armor:.35,stealth:.62,social:.97},
+ unlockCond:{pop:260,year:112},
+ children:['wolvring'],
+ lore:'El Wolfciv tiene leyes. Sin escritura, sin papel. Solo la memoria colectiva de la manada.'
+},
+{id:'stryxking',  name:'Stryxking',  tier:4, cat:'intelligent',parent:'stryxar',
+ icon:'🦅', color:'#b45309',
+ type:'Ave gobernante con cultura oral',
+ desc:'Civilización aérea. Mapas mentales del mundo. Mensajería entre colonias. El primer sistema de comunicación a distancia.',
+ biomes:['Montaña','Pradera','Costa','Bosque'],
+ genes:{size:.42,speed:.85,cold:.55,heat:.58,aquatic:.1,intel:.92,repro:.32,armor:.15,stealth:.25,social:.92},
+ unlockCond:{pop:250,year:108},
+ children:['skyciv','eagleking'],
+ lore:'El Stryxking envía mensajeros a través de continentes. El primer correo del mundo.'
+},
+{id:'deepmind',   name:'Deepmind',   tier:4, cat:'intelligent',parent:'abyssking',
+ icon:'🧿', color:'#312e81',
+ type:'Ser abisal con superinteligencia',
+ desc:'Inteligencia máxima conocida. Procesa el mundo de forma incomprensible para otros seres. El gran misterio.',
+ biomes:['Océano abisal'],
+ genes:{size:.7,speed:.35,cold:.8,heat:.05,aquatic:.99,intel:.99,repro:.18,armor:.42,stealth:.98,social:.12},
+ unlockCond:{pop:150,year:130,biome:'Océano abisal'},
+ children:['abyssciv'],
+ lore:'El Deepmind ya resolvió preguntas que los demás aún no han formulado.'
+},
+{id:'probosciv',  name:'Probosciv',  tier:4, cat:'intelligent',parent:'elefking',
+ icon:'🐘', color:'#92400e',
+ type:'Civilización de trompudos',
+ desc:'Sociedad compleja con arquitectura, rituales y escritura simbólica mediante huellas. La gran civilización del sur.',
+ biomes:['Sabana','Valle fértil','Pradera cálida'],
+ genes:{size:.88,speed:.28,cold:.4,heat:.68,aquatic:.3,intel:.98,repro:.2,armor:.55,stealth:.04,social:.99},
+ unlockCond:{pop:300,year:125},
+ children:['thinker'],
+ lore:'Los Probosciv escriben con sus pies en la tierra húmeda. Sus bibliotecas son praderas.'
+},
+{id:'aquaciv',    name:'Aquaciv',    tier:4, cat:'intelligent',parent:'marfolk',
+ icon:'🌊', color:'#0c4a6e',
+ type:'Civilización oceánica avanzada',
+ desc:'Ciudad submarina. Cultivan algas, domestican peces. El paralelo marino de la civilización terrestre.',
+ biomes:['Océano','Laguna','Costa profunda'],
+ genes:{size:.55,speed:.68,cold:.5,heat:.5,aquatic:.97,intel:.96,repro:.32,armor:.28,stealth:.35,social:.95},
+ unlockCond:{pop:280,year:122},
+ children:[],
+ lore:'Las ciudades del Aquaciv brillan en el fondo del mar. Nadie en tierra sabe que existen.'
+},
+{id:'skyciv',     name:'Skyciv',     tier:4, cat:'intelligent',parent:'stryxking',
+ icon:'🦅', color:'#78350f',
+ type:'Civilización aérea nómada',
+ desc:'No construyen en tierra. Sus ciudades son formaciones de vuelo permanente. Civilización móvil.',
+ biomes:['Cielo alto','Montaña','Costa'],
+ genes:{size:.45,speed:.92,cold:.58,heat:.6,aquatic:.08,intel:.95,repro:.28,armor:.12,stealth:.28,social:.92},
+ unlockCond:{pop:260,year:118},
+ children:[],
+ lore:'Los Skyciv no tienen hogar fijo. El cielo entero es su ciudad.'
+},
+{id:'abyssciv',   name:'Abyssciv',   tier:4, cat:'intelligent',parent:'deepmind',
+ icon:'🌑', color:'#1e1b4b',
+ type:'Civilización abisal incognoscible',
+ desc:'Una civilización que opera según reglas completamente distintas. Nadie de la superficie ha tenido contacto.',
+ biomes:['Océano abisal'],
+ genes:{size:.75,speed:.32,cold:.82,heat:.04,aquatic:.99,intel:.99,repro:.15,armor:.45,stealth:.99,social:.22},
+ unlockCond:{pop:180,year:140},
+ children:[],
+ lore:'El Abyssciv existe. Más allá de esto, nadie sabe nada.'
+},
+
+// ════════════════════════════════════════
+//  TIER 3-4 ADDITIONAL SPECIES (filling to 150)
+// ════════════════════════════════════════
+{id:'raptorak',   name:'Raptorak',   tier:3, cat:'dinosaur',  parent:'drakmur',
+ icon:'🦖', color:'#b91c1c', type:'Raptor veloz inteligente',
+ desc:'El más ágil de los grandes depredadores. Caza coordinada en grupos de 3-5.',
+ biomes:['Pradera','Bosque','Jungla'],
+ genes:{size:.5,speed:.95,cold:.25,heat:.7,aquatic:.02,intel:.52,repro:.45,armor:.32,stealth:.55,social:.65},
+ unlockCond:{pop:220,year:72}, children:['packmaster','fangmur'], lore:'El Raptorak piensa antes de atacar. Eso lo hace más peligroso.'
+},
+{id:'fangmur',    name:'Fangmur',    tier:3, cat:'dinosaur',  parent:'drakmur',
+ icon:'🐉', color:'#7f1d1d', type:'Dinosaurio con veneno',
+ desc:'Combina el tamaño del Drakmur con el veneno del Venomyx. El cruce más letal.',
+ biomes:['Jungla','Desierto','Pantano'],
+ genes:{size:.72,speed:.52,cold:.15,heat:.78,aquatic:.08,intel:.32,repro:.28,armor:.55,stealth:.42,social:.12},
+ unlockCond:{pop:200,year:75}, children:['endosaur'], lore:'El Fangmur muerde una vez. No necesita morder dos.'
+},
+{id:'packmaster', name:'Packmaster', tier:3, cat:'mammal',    parent:'velshir',
+ icon:'🐺', color:'#dc2626', type:'Líder de manada supremo',
+ desc:'Coordina manadas de hasta 50 individuos. Proto-lenguaje vocal de 30+ señales.',
+ biomes:['Pradera','Bosque','Tundra'],
+ genes:{size:.55,speed:.82,cold:.62,heat:.45,aquatic:.1,intel:.68,repro:.42,armor:.28,stealth:.45,social:.92},
+ unlockCond:{pop:210,year:78}, children:['wolfking','wolfciv'], lore:'El Packmaster no necesita ser el más fuerte. Solo necesita ser el más listo.'
+},
+{id:'tunnark',    name:'Tunnark',    tier:3, cat:'reptile',   parent:'umbrath',
+ icon:'🦔', color:'#6d28d9', type:'Excavador colonial',
+ desc:'Crea redes de túneles de kilómetros. Colonias de miles. El primer superorganismo.',
+ biomes:['Pradera','Desierto','Tundra'],
+ genes:{size:.18,speed:.25,cold:.72,heat:.3,aquatic:.05,intel:.35,repro:.98,armor:.48,stealth:.88,social:.95},
+ unlockCond:{pop:180,year:65}, children:['blindmole'], lore:'Los Tunnark individuales son insignificantes. La colonia es invencible.'
+},
+{id:'blindmole',  name:'Blindmole',  tier:3, cat:'mammal',    parent:'tunnark',
+ icon:'🦡', color:'#7c3aed', type:'Topo ciego con sexto sentido',
+ desc:'Sin ojos. Detecta vibraciones con precisión milimétrica. Siente el mundo de una forma única.',
+ biomes:['Pradera subterránea','Bosque subterráneo','Montaña subterránea'],
+ genes:{size:.22,speed:.35,cold:.78,heat:.25,aquatic:.05,intel:.55,repro:.75,armor:.38,stealth:.95,social:.72},
+ unlockCond:{pop:170,year:68}, children:['morvath'], lore:'El Blindmole no ve. Siente. Y lo que siente, lo sabe.'
+},
+{id:'titanark',   name:'Titanark',   tier:3, cat:'dinosaur',  parent:'saurophor',
+ icon:'🦕', color:'#451a03', type:'Titán herbívoro colosal',
+ desc:'El mayor ser terrestre jamás visto. Su sola presencia remodela el paisaje.',
+ biomes:['Pradera','Jungla','Bosque'],
+ genes:{size:.99,speed:.12,cold:.28,heat:.55,aquatic:.18,intel:.12,repro:.15,armor:.65,stealth:.01,social:.42},
+ unlockCond:{pop:250,year:95}, children:['giantherb','endosaur'], lore:'El Titanark aplasta árboles sin darse cuenta. Para él son briznas de hierba.'
+},
+{id:'giantherb',  name:'Giantherb',  tier:3, cat:'dinosaur',  parent:'titanark',
+ icon:'🌿', color:'#166534', type:'Herbívoro gigante pacífico',
+ desc:'Colosal pero pacífico. Crea ecosistemas con su paso. Su estiércol fertiliza selvas enteras.',
+ biomes:['Jungla','Pradera','Bosque'],
+ genes:{size:.97,speed:.15,cold:.25,heat:.52,aquatic:.22,intel:.15,repro:.18,armor:.62,stealth:.01,social:.58},
+ unlockCond:{pop:220,year:88}, children:[], lore:'El Giantherb camina y el bosque crece tras él.'
+},
+{id:'endosaur',   name:'Endosaur',   tier:4, cat:'dinosaur',  parent:'gorathex',
+ icon:'🦎', color:'#450a0a', type:'Dinosaurio último superviviente',
+ desc:'El último de los grandes dinosaurios. Resistencia sobrenatural. Símbolo de la persistencia.',
+ biomes:['Pradera','Desierto','Jungla','Montaña'],
+ genes:{size:.92,speed:.38,cold:.45,heat:.85,aquatic:.12,intel:.38,repro:.22,armor:.98,stealth:.18,social:.15},
+ unlockCond:{pop:300,year:130}, children:[], lore:'Todos creen que los dinosaurios desaparecieron. El Endosaur no lo sabe.'
+},
+{id:'constrikr',  name:'Constrikr',  tier:3, cat:'reptile',   parent:'venomyx',
+ icon:'🐍', color:'#a16207', type:'Boa constrictora gigante',
+ desc:'Mata por constricción. Sin veneno, sin garras. Solo fuerza pura. La mayor serpiente.',
+ biomes:['Jungla','Pantano','Bosque tropical'],
+ genes:{size:.65,speed:.42,cold:.18,heat:.65,aquatic:.45,intel:.18,repro:.52,armor:.22,stealth:.88,social:.05},
+ unlockCond:{pop:160,year:60}, children:['kraythen'], lore:'El Constrikr abraza a su presa. El último abrazo.'
+},
+{id:'kraythen',   name:'Kraythen',   tier:3, cat:'reptile',   parent:'constrikr',
+ icon:'🐉', color:'#92400e', type:'Serpiente voladora mítica',
+ desc:'Evoluciona membranas de vuelo. El ser más temido de su era. Depredador aéreo-terrestre.',
+ biomes:['Jungla','Montaña','Desierto'],
+ genes:{size:.58,speed:.78,cold:.22,heat:.72,aquatic:.15,intel:.28,repro:.38,armor:.35,stealth:.75,social:.08},
+ unlockCond:{pop:200,year:85}, children:[], lore:'El Kraythen repta, salta y vuela. Ningún lugar es seguro.'
+},
+{id:'chromafrog', name:'Chromafrog', tier:3, cat:'amphibian', parent:'toxaris',
+ icon:'🐸', color:'#d97706', type:'Rana camaleónica venenosa',
+ desc:'Cambia de color Y es venenoso. Doble defensa evolutiva. Imposible de cazar con seguridad.',
+ biomes:['Jungla','Pantano','Bosque húmedo'],
+ genes:{size:.14,speed:.48,cold:.2,heat:.6,aquatic:.65,intel:.28,repro:.88,armor:.05,stealth:.92,social:.22},
+ unlockCond:{pop:150,year:62}, children:['bioweapon'], lore:'El Chromafrog desaparece ante tus ojos. Pero su veneno sigue ahí.'
+},
+{id:'bioweapon',  name:'Bioweapon',  tier:4, cat:'amphibian', parent:'chromafrog',
+ icon:'☣️', color:'#ca8a04', type:'Anfibio de toxinas mortales',
+ desc:'Su piel produce el veneno más potente del mundo natural. Una gota basta para matar seres 100 veces más grandes.',
+ biomes:['Jungla','Pantano'],
+ genes:{size:.1,speed:.45,cold:.15,heat:.65,aquatic:.7,intel:.25,repro:.82,armor:.01,stealth:.7,social:.15},
+ unlockCond:{pop:180,year:90}, children:[], lore:'El Bioweapon es el más pequeño del mundo. Y el más peligroso.'
+},
+{id:'mudcrawl',   name:'Mudcrawl',   tier:3, cat:'amphibian', parent:'selphyn',
+ icon:'🦎', color:'#713f12', type:'Anfibio del barro excavador',
+ desc:'Vive en el fango. Extrae nutrientes del suelo directamente. Resistente a casi todo.',
+ biomes:['Pantano','Delta','Playa fangosa'],
+ genes:{size:.3,speed:.22,cold:.38,heat:.48,aquatic:.78,intel:.18,repro:.92,armor:.42,stealth:.62,social:.15},
+ unlockCond:{pop:120,year:45}, children:['selphyn'], lore:'El Mudcrawl sobrevivirá todo. Es demasiado terco para no hacerlo.'
+},
+{id:'choreph',    name:'Choreph',    tier:3, cat:'amphibian', parent:'resonar',
+ icon:'🎶', color:'#0891b2', type:'Anfibio coral colectivo',
+ desc:'Canta en grupos de hasta 1000 individuos. Su coro resuena a 50km. Primer ser con música.',
+ biomes:['Jungla','Pantano','Bosque húmedo'],
+ genes:{size:.16,speed:.5,cold:.3,heat:.4,aquatic:.65,intel:.65,repro:.85,armor:.04,stealth:.25,social:.98},
+ unlockCond:{pop:180,year:72}, children:['amphibint'], lore:'El Choreph canta y 1000 voces responden. Eso es una sociedad.'
+},
+{id:'amphibint',  name:'Amphibint',  tier:4, cat:'intelligent',parent:'choreph',
+ icon:'🐸', color:'#0284c7', type:'Anfibio pensante colectivo',
+ desc:'El primer anfibio que alcanza inteligencia comparable a primates. Civilización basada en el sonido colectivo.',
+ biomes:['Jungla','Pantano','Delta'],
+ genes:{size:.18,speed:.52,cold:.32,heat:.45,aquatic:.72,intel:.88,repro:.72,armor:.04,stealth:.35,social:.97},
+ unlockCond:{pop:220,year:105}, children:['songkin'], lore:'Los Amphibint piensan juntos. Una sola mente repartida en miles de cuerpos.'
+},
+{id:'songkin',    name:'Songkin',    tier:4, cat:'intelligent',parent:'amphibint',
+ icon:'🎵', color:'#0369a1', type:'Civilización sónica',
+ desc:'Civilización basada enteramente en el sonido. Su arquitectura es acústica, sus leyes son canciones.',
+ biomes:['Jungla','Pantano','Costa sonora'],
+ genes:{size:.2,speed:.48,cold:.3,heat:.48,aquatic:.7,intel:.94,repro:.65,armor:.04,stealth:.3,social:.99},
+ unlockCond:{pop:260,year:120}, children:[], lore:'Las leyes del Songkin se cantan. Los que las rompen, son silenciados.'
+},
+{id:'silverfin',  name:'Silverfin',  tier:3, cat:'aquatic',   parent:'riveth',
+ icon:'🐟', color:'#94a3b8', type:'Pez plateado ultrarrápido',
+ desc:'El ser más rápido en el agua. Nada a velocidades incomprensibles. Escapa de cualquier depredador.',
+ biomes:['Río','Océano','Lago'],
+ genes:{size:.2,speed:.99,cold:.45,heat:.38,aquatic:.98,intel:.18,repro:.78,armor:.08,stealth:.55,social:.42},
+ unlockCond:{pop:140,year:55}, children:['leapfish'], lore:'El Silverfin vuela a través del agua. El agua apenas lo nota.'
+},
+{id:'leapfish',   name:'Leapfish',   tier:3, cat:'aquatic',   parent:'riveth',
+ icon:'🐟', color:'#7dd3fc', type:'Pez saltador terrestre',
+ desc:'Puede salir del agua y moverse en tierra por períodos cortos. Evolución de regreso hacia tierra.',
+ biomes:['Río','Playa','Zona costera'],
+ genes:{size:.28,speed:.65,cold:.35,heat:.42,aquatic:.78,intel:.22,repro:.72,armor:.12,stealth:.42,social:.28},
+ unlockCond:{pop:130,year:52}, children:['riveth'], lore:'El Leapfish no sabe que está repitiendo lo que sus ancestros hicieron millones de años antes.'
+},
+{id:'riverking',  name:'Riverking',  tier:4, cat:'aquatic',   parent:'megacroc',
+ icon:'🐊', color:'#052e16', type:'Cocodrílido rey de los ríos',
+ desc:'Domina cuencas fluviales enteras. Los demás seres organizan sus vidas en torno a evitarlo.',
+ biomes:['Gran Río','Delta','Pantano profundo'],
+ genes:{size:.98,speed:.2,cold:.22,heat:.72,aquatic:.96,intel:.22,repro:.28,armor:.98,stealth:.72,social:.08},
+ unlockCond:{pop:200,year:100}, children:[], lore:'El Riverking no necesita moverse. Todo el río viene a él eventualmente.'
+},
+{id:'crocking',   name:'Crocking',   tier:4, cat:'aquatic',   parent:'megacroc',
+ icon:'🐊', color:'#14532d', type:'Cocodrílido con inteligencia social',
+ desc:'Sorprendentemente inteligente para su linaje. Cría cooperativa, comunicación entre grupos. El cocodrilo pensante.',
+ biomes:['Río','Delta','Costa'],
+ genes:{size:.88,speed:.28,cold:.28,heat:.68,aquatic:.94,intel:.48,repro:.32,armor:.92,stealth:.68,social:.62},
+ unlockCond:{pop:190,year:95}, children:[], lore:'El Crocking recuerda las caras. Y nunca olvida a sus enemigos.'
+},
+{id:'thermalr',   name:'Thermalr',   tier:3, cat:'bird',      parent:'pyronar',
+ icon:'🦅', color:'#c2410c', type:'Ave de corrientes termales',
+ desc:'Vuela sin aletear usando corrientes de calor. Domina vastos territorios sin gastar energía.',
+ biomes:['Desierto','Pradera','Montaña','Zona volcánica'],
+ genes:{size:.48,speed:.88,cold:.2,heat:.88,aquatic:.02,intel:.38,repro:.38,armor:.18,stealth:.28,social:.22},
+ unlockCond:{pop:170,year:68}, children:['eagleking'], lore:'El Thermalr planea durante días. La tierra le parece pequeña.'
+},
+{id:'eagleking',  name:'Eagleking',  tier:4, cat:'bird',      parent:'thermalr',
+ icon:'🦅', color:'#92400e', type:'Águila rey del cielo',
+ desc:'El mayor depredador aéreo. Vista que ve a 5km de distancia. Ataca en picado a 300km/h.',
+ biomes:['Montaña alta','Pradera','Costa'],
+ genes:{size:.55,speed:.98,cold:.55,heat:.65,aquatic:.08,intel:.52,repro:.32,armor:.22,stealth:.38,social:.18},
+ unlockCond:{pop:200,year:90}, children:[], lore:'El Eagleking ve todo. Es lo más cercano a un dios que existe en el cielo.'
+},
+{id:'kraven',     name:'Kraven',     tier:3, cat:'bird',      parent:'kyravel',
+ icon:'🦜', color:'#b45309', type:'Ave ingeniosa ladrona',
+ desc:'Roba herramientas y las usa. Resuelve problemas complejos. El más listo de las aves.',
+ biomes:['Bosque','Ciudad primitiva','Costa'],
+ genes:{size:.28,speed:.75,cold:.48,heat:.52,aquatic:.08,intel:.85,repro:.52,armor:.1,stealth:.58,social:.68},
+ unlockCond:{pop:185,year:80}, children:['stryxking'], lore:'El Kraven roba ideas de otros. Las mejora. Las hace suyas.'
+},
+{id:'chiropt',    name:'Chiropt',    tier:3, cat:'mammal',    parent:'bathrex',
+ icon:'🦇', color:'#5b21b6', type:'Quiróptero social nocturno',
+ desc:'Colonias de millones de individuos. Ecolocalización grupal que detecta cambios climáticos.',
+ biomes:['Cueva','Bosque nocturno','Ciudad subterránea'],
+ genes:{size:.25,speed:.82,cold:.58,heat:.35,aquatic:.04,intel:.55,repro:.68,armor:.12,stealth:.88,social:.92},
+ unlockCond:{pop:190,year:78}, children:['nightkin'], lore:'Millones de Chiropt en una cueva piensan juntos sin saberlo.'
+},
+{id:'nightkin',   name:'Nightkin',   tier:4, cat:'intelligent',parent:'chiropt',
+ icon:'🦇', color:'#3b0764', type:'Murciélago pensante nocturno',
+ desc:'Inteligencia plena nocturna. Civilización que opera de noche. Su mundo y el diurno coexisten sin conocerse.',
+ biomes:['Cueva','Bosque nocturno','Montaña'],
+ genes:{size:.28,speed:.85,cold:.62,heat:.28,aquatic:.05,intel:.92,repro:.55,armor:.12,stealth:.95,social:.88},
+ unlockCond:{pop:230,year:108}, children:[], lore:'El Nightkin construyó una civilización entera sin que nadie de día lo supiera.'
+},
+{id:'thinker',    name:'Thinker',    tier:4, cat:'intelligent',parent:'probosciv',
+ icon:'🧠', color:'#78350f', type:'Elefántico filósofo',
+ desc:'El ser terrestre con mayor cociente intelectual. Medita, crea arte, tiene religión primitiva.',
+ biomes:['Sabana','Valle sagrado','Pradera'],
+ genes:{size:.85,speed:.28,cold:.42,heat:.65,aquatic:.28,intel:.99,repro:.18,armor:.52,stealth:.04,social:.97},
+ unlockCond:{pop:320,year:135}, children:[], lore:'El Thinker se pregunta por qué existe. Es la primera vez que alguien lo hace.'
+},
+{id:'wolvring',   name:'Wolvring',   tier:4, cat:'intelligent',parent:'wolfciv',
+ icon:'🐺', color:'#1e293b', type:'Federación lobuna',
+ desc:'Múltiples manadas unidas por tratado. El primer sistema político entre distintos grupos.',
+ biomes:['Tundra','Bosque frío','Montaña'],
+ genes:{size:.65,speed:.72,cold:.98,heat:.22,aquatic:.18,intel:.95,repro:.35,armor:.38,stealth:.58,social:.99},
+ unlockCond:{pop:280,year:118}, children:[], lore:'El Wolvring negocia. Es más peligroso que cuando luchaba.'
+},
+{id:'oceanting',  name:'Oceanting',  tier:4, cat:'intelligent',parent:'aquaciv',
+ icon:'🌊', color:'#083344', type:'Imperio oceánico',
+ desc:'El mayor estado marino. Controla rutas de migración de peces. La primera economía del planeta.',
+ biomes:['Océano','Archipiélago','Costa'],
+ genes:{size:.58,speed:.65,cold:.52,heat:.52,aquatic:.98,intel:.97,repro:.28,armor:.3,stealth:.38,social:.98},
+ unlockCond:{pop:300,year:130}, children:[], lore:'El Oceanting controla el mar. Y quien controla el mar, controla el mundo.'
+},
+{id:'navikin',    name:'Navikin',    tier:3, cat:'aquatic',   parent:'sonaryn',
+ icon:'🧭', color:'#0c4a6e', type:'Ser marino navegante',
+ desc:'Primer ser que realiza migraciones guiadas por campos magnéticos con precisión perfecta. El primer navegante.',
+ biomes:['Océano abierto','Mar polar','Costa'],
+ genes:{size:.45,speed:.78,cold:.58,heat:.45,aquatic:.98,intel:.68,repro:.42,armor:.22,stealth:.38,social:.55},
+ unlockCond:{pop:170,year:72}, children:['oceanting'], lore:'El Navikin nunca se pierde. Lleva el mapa del mundo en sus genes.'
+},
+{id:'polarcet',   name:'Polarcet',   tier:3, cat:'aquatic',   parent:'glacivyr',
+ icon:'🐋', color:'#e0f2fe', type:'Ballena polar colosal',
+ desc:'El mayor ser del hemisferio norte. Canta durante meses seguidos. Su canción es un mapa del ártico.',
+ biomes:['Océano polar','Mar ártico'],
+ genes:{size:.97,speed:.25,cold:.99,heat:.05,aquatic:.99,intel:.65,repro:.12,armor:.55,stealth:.08,social:.62},
+ unlockCond:{pop:130,year:75,biome:'Océano polar'}, children:['leviath'], lore:'El Polarcet canta el mapa del ártico. Y el ártico responde.'
+},
+{id:'komoran',    name:'Komoran',    tier:3, cat:'reptile',   parent:'reptann',
+ icon:'🦎', color:'#3f6212', type:'Reptil veneno-bacteria',
+ desc:'Usa bacterias en su saliva como arma biológica. El primer ser con guerra bacteriológica natural.',
+ biomes:['Jungla','Isla','Pantano'],
+ genes:{size:.52,speed:.42,cold:.22,heat:.68,aquatic:.28,intel:.25,repro:.48,armor:.42,stealth:.48,social:.12},
+ unlockCond:{pop:150,year:60}, children:['fangmur'], lore:'El Komoran no necesita matar. Solo necesita morder. El resto lo hace el tiempo.'
+},
+{id:'evolvar',    name:'Evolvar',    tier:3, cat:'reptile',   parent:'reptann',
+ icon:'🦎', color:'#16a34a', type:'Reptil hipermutable',
+ desc:'Tasa de mutación 10 veces superior a cualquier otro ser. Evoluciona en décadas lo que otros tardan milenios.',
+ biomes:['Pradera','Bosque','Desierto','Jungla'],
+ genes:{size:.35,speed:.55,cold:.45,heat:.48,aquatic:.22,intel:.38,repro:.85,armor:.28,stealth:.45,social:.32},
+ unlockCond:{pop:145,year:58}, children:['zylthari','komoran'], lore:'El Evolvar es diferente cada generación. Y cada generación es mejor.'
+},
+{id:'rhinark',    name:'Rhinark',    tier:3, cat:'mammal',    parent:'pachydar',
+ icon:'🦏', color:'#57534e', type:'Rinoceronte primario agresivo',
+ desc:'Cuerno como arma. Carga a ciegas. El más agresivo de los grandes herbívoros.',
+ biomes:['Pradera','Sabana','Bosque'],
+ genes:{size:.82,speed:.42,cold:.32,heat:.55,aquatic:.15,intel:.22,repro:.32,armor:.88,stealth:.05,social:.25},
+ unlockCond:{pop:170,year:70}, children:['pachydking'], lore:'El Rhinark no piensa antes de cargar. Ese es su plan.'
+},
+{id:'pachydking', name:'Pachydking', tier:4, cat:'mammal',    parent:'rhinark',
+ icon:'🦏', color:'#44403c', type:'Rey de los paquidermos',
+ desc:'Domina vastos territorios. Los demás mamíferos organizan sus migraciones en torno a sus rutas.',
+ biomes:['Pradera','Sabana','Bosque'],
+ genes:{size:.9,speed:.38,cold:.35,heat:.58,aquatic:.18,intel:.32,repro:.25,armor:.95,stealth:.04,social:.38},
+ unlockCond:{pop:230,year:95}, children:[], lore:'El Pachydking pasa. Y donde pasa, el paisaje cambia.'
+},
+{id:'kryonak',    name:'Kryonak',    tier:2, cat:'reptile',   parent:'frigorak',
+ icon:'🧊', color:'#38bdf8', type:'Reptil de hielo camuflado',
+ desc:'Piel blanca como la nieve, sangre anticongelante mejorada. El cazador invisible de la tundra.',
+ biomes:['Tundra','Montaña nevada','Bosque nevado'],
+ genes:{size:.42,speed:.52,cold:.95,heat:.04,aquatic:.22,intel:.25,repro:.58,armor:.45,stealth:.95,social:.12},
+ unlockCond:{pop:110,year:38,climate:'Glacial'}, children:['velmori','frigorak'], lore:'El Kryonak es nieve. Hasta que no lo es.'
+},
+{id:'leviking',   name:'Leviking',   tier:4, cat:'aquatic',   parent:'leviath',
+ icon:'🐳', color:'#1e3a5f', type:'Leviatán rey de los mares',
+ desc:'El mayor ser vivo jamás existido. Su presencia genera corrientes oceánicas. Nadie le ataca. Nadie puede.',
+ biomes:['Océano profundo','Mar abierto'],
+ genes:{size:.99,speed:.15,cold:.75,heat:.28,aquatic:.99,intel:.72,repro:.08,armor:.75,stealth:.05,social:.45},
+ unlockCond:{pop:150,year:130}, children:[], lore:'El Leviking existe. Eso es suficiente para cambiar el océano.'
+},
+{id:'mammking',   name:'Mammking',   tier:4, cat:'mammal',    parent:'mammavar',
+ icon:'🦣', color:'#6b5344', type:'Rey mamut pensante',
+ desc:'Lidera migraciones de miles. Su ruta es sagrada para docenas de especies. El primer líder interespecies.',
+ biomes:['Tundra','Estepa','Pradera fría'],
+ genes:{size:.95,speed:.25,cold:.98,heat:.1,aquatic:.08,intel:.75,repro:.2,armor:.65,stealth:.03,social:.88},
+ unlockCond:{pop:240,year:108}, children:['elefking'], lore:'El Mammking camina y cien especies le siguen. Sin saberlo, es su dios.'
+},
+{id:'tuskvar',    name:'Tuskvar',    tier:3, cat:'mammal',    parent:'mammavar',
+ icon:'🦣', color:'#78716c', type:'Mamut con colmillos arma',
+ desc:'Colmillos curvos que usa como herramienta Y como arma. Excava, construye y destruye.',
+ biomes:['Tundra','Pradera fría','Estepa'],
+ genes:{size:.88,speed:.3,cold:.95,heat:.12,aquatic:.1,intel:.55,repro:.28,armor:.58,stealth:.04,social:.65},
+ unlockCond:{pop:190,year:82}, children:['mammking'], lore:'El Tuskvar usa sus colmillos para cavar raíces. Y para cavar tumbas.'
+},
+{id:'batking',    name:'Batking',    tier:4, cat:'mammal',    parent:'bathrex',
+ icon:'🦇', color:'#2e1065', type:'Rey murciélago depredador nocturno',
+ desc:'El mayor depredador nocturno. Envergadura de 4 metros. Aterradoramente silencioso.',
+ biomes:['Cueva grande','Bosque denso','Montaña'],
+ genes:{size:.52,speed:.92,cold:.6,heat:.3,aquatic:.05,intel:.58,repro:.38,armor:.25,stealth:.98,social:.28},
+ unlockCond:{pop:210,year:90}, children:['bathrex'], lore:'Nadie ve venir al Batking. Solo se escucha el silencio donde estaba su presa.'
+},
+{id:'techsyn',    name:'Techsyn',    tier:4, cat:'intelligent',parent:'civitas',
+ icon:'⚙️', color:'#4338ca', type:'Civilización tecnológica primitiva',
+ desc:'Descubre el metal, la rueda y la escritura. El salto definitivo. El mundo nunca volverá a ser igual.',
+ biomes:['Valle fértil','Costa','Pradera'],
+ genes:{size:.5,speed:.45,cold:.65,heat:.65,aquatic:.2,intel:.99,repro:.4,armor:.08,stealth:.2,social:.97},
+ unlockCond:{pop:400,year:150}, children:[], lore:'El Techsyn forja el primer metal. En ese momento, el resto del mundo se queda atrás.'
+},
+{id:'arcanum',    name:'Arcanum',    tier:4, cat:'intelligent',parent:'civitas',
+ icon:'📜', color:'#5b21b6', type:'Civilización del conocimiento',
+ desc:'Prioriza el saber sobre el poder. La primera biblioteca, la primera escuela, el primer científico.',
+ biomes:['Montaña sagrada','Valle','Ciudad antigua'],
+ genes:{size:.48,speed:.42,cold:.62,heat:.6,aquatic:.18,intel:.99,repro:.38,armor:.06,stealth:.25,social:.94},
+ unlockCond:{pop:380,year:148}, children:[], lore:'El Arcanum escribe la historia. Y la historia le recuerda.'
+},
+{id:'nomadyn',    name:'Nomadyn',    tier:3, cat:'intelligent',parent:'syndari',
+ icon:'🏕️', color:'#854d0e', type:'Homínido nómada cazador-recolector',
+ desc:'Recorre el mundo entero. Primer ser que conoce todos los biomas. Su conocimiento es universal.',
+ biomes:['Pradera','Bosque','Tundra','Desierto','Costa'],
+ genes:{size:.48,speed:.55,cold:.7,heat:.7,aquatic:.2,intel:.88,repro:.5,armor:.1,stealth:.45,social:.72},
+ unlockCond:{pop:220,year:98}, children:['civitas','arcanum'], lore:'El Nomadyn no tiene hogar. El mundo entero es su hogar.'
+},
+{id:'syndking',   name:'Syndking',   tier:4, cat:'intelligent',parent:'syndari',
+ icon:'👑', color:'#9f1239', type:'Rey homínido primer estado',
+ desc:'El primer ser que inventa el concepto de nación. Gobierna por ley, no por fuerza. El primer Estado.',
+ biomes:['Valle fértil','Costa','Pradera'],
+ genes:{size:.5,speed:.48,cold:.62,heat:.62,aquatic:.18,intel:.98,repro:.42,armor:.1,stealth:.22,social:.98},
+ unlockCond:{pop:350,year:145}, children:['techsyn'], lore:'El Syndking no necesita ser el más fuerte. Solo necesita que todos crean que lo es.'
+},
+{id:'hominar',    name:'Hominar',    tier:3, cat:'intelligent',parent:'narvek',
+ icon:'🧑', color:'#7c2d12', type:'Homo primitivo cazador',
+ desc:'Primer ser que cocina la comida. El fuego le da más energía, mayor cerebro. Salto evolutivo definitivo.',
+ biomes:['Pradera','Bosque','Costa','Montaña'],
+ genes:{size:.48,speed:.5,cold:.65,heat:.65,aquatic:.15,intel:.92,repro:.5,armor:.1,stealth:.38,social:.82},
+ unlockCond:{pop:210,year:88}, children:['syndari','nomadyn'], lore:'El Hominar descubre que cocinar cambia el sabor. No sabe que también le cambia a él.'
+},
+{id:'narvking',   name:'Narvking',   tier:3, cat:'intelligent',parent:'narvek',
+ icon:'🐒', color:'#713f12', type:'Primate rey de la selva',
+ desc:'Domina el dosel de la selva. Usa herramientas complejas. Primer ser que engaña intencionalmente.',
+ biomes:['Jungla','Bosque tropical','Montaña'],
+ genes:{size:.45,speed:.62,cold:.4,heat:.6,aquatic:.12,intel:.88,repro:.48,armor:.12,stealth:.45,social:.85},
+ unlockCond:{pop:200,year:84}, children:['hominar'], lore:'El Narvking engaña a sus rivales. Y se siente orgulloso de ello.'
+},
+{id:'zyltking',   name:'Zyltking',   tier:3, cat:'intelligent',parent:'zylthari',
+ icon:'🦊', color:'#c2410c', type:'Zorro rey astuto',
+ desc:'El más inteligente de su linaje antes del salto primate. Primer ser que planifica a más de un año vista.',
+ biomes:['Bosque','Pradera','Costa'],
+ genes:{size:.4,speed:.62,cold:.52,heat:.55,aquatic:.2,intel:.86,repro:.5,armor:.15,stealth:.48,social:.78},
+ unlockCond:{pop:185,year:82}, children:['narvek'], lore:'El Zyltking recuerda el invierno pasado. Y ya prepara el próximo.'
+},
+{id:'cunning',    name:'Cunning',    tier:3, cat:'intelligent',parent:'zylthari',
+ icon:'🦊', color:'#9a3412', type:'Zorro urbano adaptable supremo',
+ desc:'Prospera en cualquier entorno. Se adapta a los cambios en días, no generaciones. El más flexible.',
+ biomes:['Pradera','Bosque','Costa','Desierto','Tundra'],
+ genes:{size:.35,speed:.65,cold:.65,heat:.65,aquatic:.25,intel:.82,repro:.62,armor:.12,stealth:.55,social:.62},
+ unlockCond:{pop:175,year:78}, children:['zyltking'], lore:'El Cunning prospera donde otros fracasan. Siempre encuentra la manera.'
+},
+{id:'shellmax',   name:'Shellmax',   tier:3, cat:'reptile',   parent:'keldrix',
+ icon:'🐢', color:'#166534', type:'Tortuga acorazada máxima',
+ desc:'Su caparazón es tan duro que ni los dinosaurios pueden romperlo. Prácticamente indestructible.',
+ biomes:['Pradera','Bosque','Playa','Montaña'],
+ genes:{size:.55,speed:.1,cold:.65,heat:.45,aquatic:.35,intel:.2,repro:.35,armor:.99,stealth:.06,social:.1},
+ unlockCond:{pop:160,year:65}, children:['ancientone'], lore:'El Shellmax no necesita huir. Nada puede hacerle daño.'
+},
+{id:'ancientone', name:'Ancientone', tier:4, cat:'reptile',   parent:'shellmax',
+ icon:'🐢', color:'#052e16', type:'El Ser Antiguo',
+ desc:'Vive 500 años. Ha visto surgir y desaparecer civilizaciones enteras. El testigo de la historia.',
+ biomes:['Isla sagrada','Bosque antiguo','Montaña'],
+ genes:{size:.6,speed:.08,cold:.7,heat:.5,aquatic:.4,intel:.28,repro:.18,armor:.99,stealth:.04,social:.08},
+ unlockCond:{pop:180,year:130}, children:[], lore:'El Ancientone recuerda cuando no había nada. Y recuerda todo lo que vino después.'
+},
+{id:'tyranking',  name:'Tyranking',  tier:4, cat:'dinosaur',  parent:'gorathex',
+ icon:'🦕', color:'#7f1d1d', type:'Rey dinosaurio último dominador',
+ desc:'El último gran rey antes de la gran extinción. Su reinado dura miles de años. Imparable.',
+ biomes:['Pradera','Jungla','Sabana','Desierto'],
+ genes:{size:.99,speed:.45,cold:.2,heat:.88,aquatic:.03,intel:.38,repro:.12,armor:.98,stealth:.06,social:.18},
+ unlockCond:{pop:320,year:130}, children:[], lore:'El Tyranking no sabe que es el último. Eso quizás es lo más triste.'
+},
+{id:'kordking',   name:'Kordking',   tier:3, cat:'mammal',    parent:'kordavar',
+ icon:'🦬', color:'#713f12', type:'Búfalo rey de las manadas',
+ desc:'Lidera migraciones de decenas de miles. El mayor movimiento coordinado de seres vivos.',
+ biomes:['Pradera','Sabana','Estepa'],
+ genes:{size:.78,speed:.48,cold:.45,heat:.52,aquatic:.18,intel:.28,repro:.42,armor:.62,stealth:.06,social:.88},
+ unlockCond:{pop:200,year:80}, children:['pachydar'], lore:'Cuando el Kordking se mueve, la tierra tiembla. Y todos se apartan.'
+},
+{id:'leapfish2',   name:'Landfish',  tier:3, cat:'amphibian', parent:'leapfish',
+ icon:'🐟', color:'#0ea5e9', type:'Pez terrestre evolucionado',
+ desc:'Ha desarrollado pseudopatas funcionales. Puede vivir días fuera del agua. El ciclo se repite.',
+ biomes:['Costa','Playa','Pantano costero'],
+ genes:{size:.3,speed:.5,cold:.35,heat:.42,aquatic:.55,intel:.2,repro:.78,armor:.15,stealth:.45,social:.3},
+ unlockCond:{pop:140,year:60}, children:['selphyn'], lore:'El Landfish salió del agua. Sus ancestros también lo hicieron, hace eones.'
+},
+
+// ════════════════════════════════════════
+//  ARTRÓPODOS — RAMA PARALELA
+//  Línea independiente: no descienden de anfibios
+//  sino de artrópodos primitivos. Tier 0 propio.
+// ════════════════════════════════════════
+
+// ── TIER 0 ARTRÓPODO ──
+{id:'primarthro',  name:'Primarthro',  tier:0, cat:'insect', parent:null,
+ icon:'🦐', color:'#84cc16',
+ type:'Artrópodo primitivo acuático',
+ desc:'El ancestro de todos los artrópodos. Exoesqueleto quitinoso, vive en aguas poco profundas. Increíblemente resistente.',
+ biomes:['Playa','Pantano','Océano costero'],
+ genes:{size:.08,speed:.35,cold:.3,heat:.4,aquatic:.85,intel:.04,repro:.99,armor:.55,stealth:.45,social:.15},
+ unlockCond:null,
+ children:['trilokar','chelicyn','myriaphor'],
+ lore:'El Primarthro es pequeño. Pero hay miles de millones de ellos. Eso es más que suficiente.'
+},
+
+// ── TIER 1 ARTRÓPODO ──
+{id:'trilokar',    name:'Trilokar',    tier:1, cat:'insect', parent:'primarthro',
+ icon:'🦀', color:'#a3e635',
+ type:'Trilobites avanzado',
+ desc:'Exoesqueleto segmentado, ojos compuestos. El primero en ver el mundo en múltiples facetas. Base de los crustáceos.',
+ biomes:['Océano','Playa','Arrecife'],
+ genes:{size:.12,speed:.28,cold:.38,heat:.35,aquatic:.92,intel:.08,repro:.95,armor:.72,stealth:.35,social:.2},
+ unlockCond:{pop:80},
+ children:['crabath','scorpinex','seaspider'],
+ lore:'El Trilokar ve el mundo en 1000 pedazos. Y en cada pedazo, peligro.'
+},
+{id:'chelicyn',    name:'Chelicyn',    tier:1, cat:'insect', parent:'primarthro',
+ icon:'🕷️', color:'#65a30d',
+ type:'Quelicerado primitivo terrestre',
+ desc:'Primero en abandonar el agua completamente entre los artrópodos. Quelíceros para capturar presas.',
+ biomes:['Pradera','Bosque','Desierto'],
+ genes:{size:.1,speed:.52,cold:.25,heat:.58,aquatic:.15,intel:.1,repro:.92,armor:.48,stealth:.72,social:.08},
+ unlockCond:{pop:70},
+ children:['scorpinex','arachnid','tarankar'],
+ lore:'El Chelicyn toca tierra firme. Ocho patas. El mundo tiembla ante lo pequeño.'
+},
+{id:'myriaphor',   name:'Myriaphor',   tier:1, cat:'insect', parent:'primarthro',
+ icon:'🐛', color:'#4d7c0f',
+ type:'Miriápodo primitivo',
+ desc:'Cien patas. Vive bajo la tierra y entre la hojarasca. Base de los ciempiés gigantes y los insectos.',
+ biomes:['Bosque','Jungla','Cueva'],
+ genes:{size:.15,speed:.42,cold:.35,heat:.45,aquatic:.2,intel:.07,repro:.97,armor:.42,stealth:.65,social:.12},
+ unlockCond:{pop:75},
+ children:['centiphar','insectoid','tunnelbug'],
+ lore:'El Myriaphor tiene cien patas. Ninguna le falla nunca.'
+},
+
+// ── TIER 2 ARTRÓPODO ──
+{id:'crabath',     name:'Crabath',     tier:2, cat:'insect', parent:'trilokar',
+ icon:'🦀', color:'#b45309',
+ type:'Cangrejo primitivo gigante',
+ desc:'Crustáceo de aguas poco profundas. Pinzas poderosas. El primero en salir al litoral regularmente.',
+ biomes:['Playa','Arrecife','Océano costero','Delta'],
+ genes:{size:.35,speed:.32,cold:.42,heat:.45,aquatic:.78,intel:.12,repro:.82,armor:.88,stealth:.28,social:.22},
+ unlockCond:{pop:120,year:25},
+ children:['megacrab','horseshoe','landcrab'],
+ lore:'El Crabath no huye. Avanza de lado, pero avanza.'
+},
+{id:'scorpinex',   name:'Scorpinex',   tier:2, cat:'insect', parent:'chelicyn',
+ icon:'🦂', color:'#ca8a04',
+ type:'Escorpión primitivo gigante',
+ desc:'Aguijón venenoso, pinzas prensiles. El primer artrópodo depredador terrestre de tamaño significativo.',
+ biomes:['Desierto','Pradera árida','Cueva','Zona volcánica'],
+ genes:{size:.28,speed:.45,cold:.15,heat:.85,aquatic:.08,intel:.15,repro:.78,armor:.62,stealth:.68,social:.05},
+ unlockCond:{pop:110,year:22},
+ children:['megascorp','poisonfang','scorpking'],
+ lore:'El Scorpinex lleva el veneno en la cola. Y la paciencia en todo lo demás.'
+},
+{id:'arachnid',    name:'Arachnid',    tier:2, cat:'insect', parent:'chelicyn',
+ icon:'🕷️', color:'#713f12',
+ type:'Arácnido tejedora primitivo',
+ desc:'Primera producción de seda. Teje trampas. El primer ser que modifica el entorno para cazar.',
+ biomes:['Bosque','Jungla','Cueva','Pradera'],
+ genes:{size:.12,speed:.55,cold:.28,heat:.52,aquatic:.05,intel:.22,repro:.88,armor:.22,stealth:.85,social:.1},
+ unlockCond:{pop:105,year:20},
+ children:['tarankar','webmaster','silkspawn'],
+ lore:'El Arachnid teje su trampa. Y espera. La paciencia es su mayor arma.'
+},
+{id:'centiphar',   name:'Centiphar',   tier:2, cat:'insect', parent:'myriaphor',
+ icon:'🐛', color:'#3f6212',
+ type:'Ciempiés gigante venenoso',
+ desc:'Hasta 1 metro de longitud. Veneno paralizante. El terror de las cuevas y junglas oscuras.',
+ biomes:['Cueva','Jungla','Bosque denso'],
+ genes:{size:.42,speed:.65,cold:.32,heat:.52,aquatic:.12,intel:.1,repro:.85,armor:.38,stealth:.78,social:.06},
+ unlockCond:{pop:100,year:22},
+ children:['megacenti','chitinlord'],
+ lore:'El Centiphar es rapidísimo y letal. Nadie ve de dónde viene.'
+},
+{id:'insectoid',   name:'Insectoid',   tier:2, cat:'insect', parent:'myriaphor',
+ icon:'🦗', color:'#65a30d',
+ type:'Insecto primitivo alado',
+ desc:'Primer artrópodo con alas funcionales. Domina el aire antes que cualquier vertebrado. Colonias masivas.',
+ biomes:['Jungla','Bosque','Pradera','Pantano'],
+ genes:{size:.06,speed:.72,cold:.22,heat:.55,aquatic:.12,intel:.08,repro:.99,armor:.12,stealth:.42,social:.88},
+ unlockCond:{pop:95,year:20},
+ children:['beetleon','dragonfly','hivemind'],
+ lore:'El Insectoid vuela antes que cualquier dinosaurio. El cielo era suyo primero.'
+},
+{id:'tunnelbug',   name:'Tunnelbug',   tier:2, cat:'insect', parent:'myriaphor',
+ icon:'🪲', color:'#78350f',
+ type:'Insecto excavador colonial',
+ desc:'Crea galerías subterráneas de cientos de metros. Primer superorganismo colonial en tierra.',
+ biomes:['Pradera','Bosque','Desierto'],
+ genes:{size:.08,speed:.28,cold:.45,heat:.42,aquatic:.08,intel:.15,repro:.99,armor:.45,stealth:.82,social:.95},
+ unlockCond:{pop:90,year:18},
+ children:['antqueen','hivemind','termithar'],
+ lore:'El Tunnelbug construye ciudades bajo tierra. Nadie sabe que están ahí.'
+},
+
+// ── TIER 3 ARTRÓPODO ──
+{id:'megacrab',    name:'Megacrab',    tier:3, cat:'insect', parent:'crabath',
+ icon:'🦀', color:'#c2410c',
+ type:'Cangrejo gigante depredador',
+ desc:'Tamaño colosal para un crustáceo. Pinzas capaces de partir huesos. Domina las costas rocosas.',
+ biomes:['Arrecife','Costa rocosa','Playa','Delta'],
+ genes:{size:.65,speed:.25,cold:.45,heat:.5,aquatic:.85,intel:.18,repro:.52,armor:.95,stealth:.22,social:.15},
+ unlockCond:{pop:160,year:55},
+ children:['landcrab','crabking'],
+ lore:'El Megacrab aplasta rocas con sus pinzas. Las rocas no se quejan.'
+},
+{id:'horseshoe',   name:'Horseshoe',   tier:3, cat:'insect', parent:'crabath',
+ icon:'🦀', color:'#92400e',
+ type:'Cangrejo herradura primitivo',
+ desc:'Diseño perfecto que no cambiará durante eones. Sangre azul con propiedades únicas. El fósil viviente.',
+ biomes:['Playa','Océano costero','Delta'],
+ genes:{size:.3,speed:.2,cold:.38,heat:.45,aquatic:.88,intel:.1,repro:.88,armor:.98,stealth:.15,social:.35},
+ unlockCond:{pop:140,year:50},
+ children:['ancientone'],
+ lore:'El Horseshoe no ha cambiado en millones de años. Tiene razones para ello.'
+},
+{id:'megascorp',   name:'Megascorp',   tier:3, cat:'insect', parent:'scorpinex',
+ icon:'🦂', color:'#a16207',
+ type:'Escorpión colosal prehistórico',
+ desc:'El mayor escorpión que jamás existirá. Medio metro de longitud. El terror de su era.',
+ biomes:['Desierto','Zona volcánica','Cueva caliente'],
+ genes:{size:.55,speed:.52,cold:.08,heat:.95,aquatic:.05,intel:.18,repro:.65,armor:.75,stealth:.72,social:.06},
+ unlockCond:{pop:170,year:62},
+ children:['scorpking','poisonfang'],
+ lore:'El Megascorp reina en el desierto. Nadie le desafía dos veces.'
+},
+{id:'tarankar',    name:'Tarankar',    tier:3, cat:'insect', parent:'arachnid',
+ icon:'🕷️', color:'#451a03',
+ type:'Tarántula gigante cazadora',
+ desc:'Tamaño de un gato pequeño. Veneno neurotóxico. Caza vertebrados pequeños activamente.',
+ biomes:['Jungla','Desierto','Cueva','Bosque'],
+ genes:{size:.32,speed:.68,cold:.2,heat:.72,aquatic:.05,intel:.2,repro:.78,armor:.32,stealth:.88,social:.05},
+ unlockCond:{pop:150,year:58},
+ children:['webmaster','spiderking'],
+ lore:'El Tarankar no necesita telaraña. Prefiere la caza directa. Es más satisfactorio.'
+},
+{id:'webmaster',   name:'Webmaster',   tier:3, cat:'insect', parent:'arachnid',
+ icon:'🕸️', color:'#6b7280',
+ type:'Araña tejedora maestra',
+ desc:'Teje estructuras de seda de ingeniería perfecta. Sus redes pueden atrapar pájaros. La primera arquitecta.',
+ biomes:['Bosque','Jungla','Pantano','Cueva'],
+ genes:{size:.15,speed:.42,cold:.3,heat:.5,aquatic:.08,intel:.38,repro:.85,armor:.15,stealth:.92,social:.12},
+ unlockCond:{pop:145,year:55},
+ children:['silkspawn','spiderking'],
+ lore:'El Webmaster construye en tres dimensiones. Su arquitectura es perfecta desde el primer intento.'
+},
+{id:'hivemind',    name:'Hivemind',    tier:3, cat:'insect', parent:'insectoid',
+ icon:'🐝', color:'#fbbf24',
+ type:'Colonia insecto con mente colmena',
+ desc:'Miles de individuos actúan como un solo cerebro. Primer superorganismo verdadero con inteligencia colectiva.',
+ biomes:['Jungla','Bosque','Pradera','Pantano'],
+ genes:{size:.05,speed:.65,cold:.25,heat:.58,aquatic:.08,intel:.62,repro:.99,armor:.15,stealth:.38,social:.99},
+ unlockCond:{pop:200,year:68},
+ children:['antqueen','swarmind','beeciv'],
+ lore:'El Hivemind no tiene líder. Todos son el líder. Y nadie es el líder. Y así funciona perfectamente.'
+},
+{id:'dragonfly',   name:'Dragonfly',   tier:3, cat:'insect', parent:'insectoid',
+ icon:'🦋', color:'#22d3ee',
+ type:'Libélula gigante depredadora',
+ desc:'Envergadura de 70cm. El depredador aéreo más rápido del mundo en su momento. Caza al vuelo con 95% de éxito.',
+ biomes:['Pantano','Lago','Jungla','Bosque'],
+ genes:{size:.28,speed:.98,cold:.22,heat:.55,aquatic:.25,intel:.18,repro:.72,armor:.15,stealth:.42,social:.1},
+ unlockCond:{pop:160,year:60},
+ children:['megafly','airpred'],
+ lore:'La Dragonfly es el mejor cazador del aire. Nada que vuele está a salvo.'
+},
+{id:'beetleon',    name:'Beetleon',    tier:3, cat:'insect', parent:'insectoid',
+ icon:'🪲', color:'#166534',
+ type:'Escarabajo acorazado gigante',
+ desc:'Élitros duros como metal. Fuerza descomunal para su tamaño. El tanque del mundo de los insectos.',
+ biomes:['Bosque','Jungla','Pradera','Desierto'],
+ genes:{size:.22,speed:.35,cold:.42,heat:.55,aquatic:.15,intel:.12,repro:.88,armor:.92,stealth:.3,social:.28},
+ unlockCond:{pop:150,year:58},
+ children:['chitinlord','beetleking'],
+ lore:'El Beetleon tiene élitros que detienen garras. Y una fuerza que mueve ramas enteras.'
+},
+{id:'antqueen',    name:'Antqueen',    tier:3, cat:'insect', parent:'tunnelbug',
+ icon:'🐜', color:'#78350f',
+ type:'Hormiga reina colonia militarizada',
+ desc:'Colonias de millones con castas especializadas: soldados, obreras, exploradoras. La primera organización militar.',
+ biomes:['Pradera','Bosque','Jungla','Desierto'],
+ genes:{size:.06,speed:.55,cold:.38,heat:.62,aquatic:.05,intel:.52,repro:.99,armor:.35,stealth:.62,social:.99},
+ unlockCond:{pop:190,year:65},
+ children:['swarmind','antciv','legionant'],
+ lore:'La Antqueen gobierna millones sin hablar nunca. La feromona es su voz.'
+},
+{id:'termithar',   name:'Termithar',   tier:3, cat:'insect', parent:'tunnelbug',
+ icon:'🪲', color:'#92400e',
+ type:'Termita constructora de torres',
+ desc:'Construye estructuras de tierra de 10 metros. El primer ser que crea edificios más grandes que él mismo.',
+ biomes:['Pradera','Sabana','Desierto','Bosque'],
+ genes:{size:.05,speed:.25,cold:.32,heat:.72,aquatic:.04,intel:.42,repro:.99,armor:.38,stealth:.55,social:.98},
+ unlockCond:{pop:175,year:62},
+ children:['antciv','hivecastle'],
+ lore:'El Termithar construye torres. Sin planos. Sin arquitecto. Solo feromona e instinto perfectos.'
+},
+{id:'megacenti',   name:'Megacenti',   tier:3, cat:'insect', parent:'centiphar',
+ icon:'🐛', color:'#365314',
+ type:'Ciempiés colosal depredador',
+ desc:'2 metros de longitud. Veneno que paraliza seres 50 veces más grandes. El terror definitivo de cuevas y junglas.',
+ biomes:['Cueva','Jungla densa','Bosque oscuro'],
+ genes:{size:.58,speed:.72,cold:.28,heat:.55,aquatic:.15,intel:.12,repro:.72,armor:.45,stealth:.88,social:.04},
+ unlockCond:{pop:165,year:65},
+ children:['chitinlord'],
+ lore:'El Megacenti es el pesadilla de las pesadillas. Nada en la cueva está a salvo.'
+},
+
+// ── TIER 4 ARTRÓPODO — INTELIGENCIA COLECTIVA ──
+{id:'swarmind',    name:'Swarmind',    tier:4, cat:'intelligent', parent:'hivemind',
+ icon:'🐝', color:'#d97706',
+ type:'Enjambre con conciencia colectiva',
+ desc:'Millones de individuos forman una conciencia única distribuida. Toma decisiones complejas en milisegundos. La primera IA biológica.',
+ biomes:['Jungla','Bosque','Pradera','Pantano'],
+ genes:{size:.04,speed:.75,cold:.3,heat:.62,aquatic:.1,intel:.92,repro:.99,armor:.18,stealth:.45,social:.99},
+ unlockCond:{pop:300,year:100},
+ children:['beeciv','insectgod'],
+ lore:'El Swarmind no piensa como uno. Piensa como millones. Y eso es infinitamente más poderoso.'
+},
+{id:'antciv',      name:'Antciv',      tier:4, cat:'intelligent', parent:'antqueen',
+ icon:'🐜', color:'#b45309',
+ type:'Civilización hormiga avanzada',
+ desc:'Estado con agricultura de hongos, ganadería de pulgones, red de túneles intercontinentales. La mayor civilización subterránea.',
+ biomes:['Pradera','Bosque','Jungla','Desierto'],
+ genes:{size:.07,speed:.52,cold:.42,heat:.65,aquatic:.06,intel:.88,repro:.99,armor:.38,stealth:.68,social:.99},
+ unlockCond:{pop:320,year:108},
+ children:['insectgod'],
+ lore:'La Antciv tiene agricultura, ganadería y construcción. Y ningún individuo lo sabe. Todos lo hacen.'
+},
+{id:'beeciv',      name:'Beeciv',      tier:4, cat:'intelligent', parent:'swarmind',
+ icon:'🍯', color:'#f59e0b',
+ type:'Civilización abeja arquitecta',
+ desc:'Construye estructuras de cera de precisión matemática perfecta. Primer ser que descubre la geometría por instinto.',
+ biomes:['Pradera','Bosque','Jungla','Montaña'],
+ genes:{size:.05,speed:.68,cold:.35,heat:.6,aquatic:.08,intel:.9,repro:.98,armor:.2,stealth:.35,social:.99},
+ unlockCond:{pop:290,year:105},
+ children:['insectgod'],
+ lore:'La Beeciv descubrió el hexágono antes que nadie. La naturaleza siempre va primero.'
+},
+{id:'hivecastle',  name:'Hivecastle',  tier:4, cat:'insect', parent:'termithar',
+ icon:'🏯', color:'#92400e',
+ type:'Termitero civilización ciudad',
+ desc:'Estructuras de 30 metros con climatización pasiva perfecta, almacenes, sala del trono para la reina. Una ciudad real.',
+ biomes:['Sabana','Pradera','Desierto'],
+ genes:{size:.06,speed:.22,cold:.35,heat:.78,aquatic:.04,intel:.75,repro:.99,armor:.42,stealth:.52,social:.99},
+ unlockCond:{pop:280,year:102},
+ children:['antciv'],
+ lore:'El Hivecastle no tiene ventanas. No las necesita. Todo está calculado para la colonia.'
+},
+{id:'spiderking',  name:'Spiderking',  tier:4, cat:'insect', parent:'tarankar',
+ icon:'🕷️', color:'#3b0764',
+ type:'Araña reina inteligente solitaria',
+ desc:'Inteligencia individual real, no colectiva. La araña que piensa como individuo. El contrapunto arácnido.',
+ biomes:['Jungla','Cueva profunda','Bosque oscuro'],
+ genes:{size:.38,speed:.72,cold:.25,heat:.68,aquatic:.08,intel:.82,repro:.72,armor:.35,stealth:.96,social:.05},
+ unlockCond:{pop:240,year:98},
+ children:['insectgod'],
+ lore:'El Spiderking piensa solo. Y sus pensamientos son trampas perfectas.'
+},
+{id:'scorpking',   name:'Scorpking',   tier:4, cat:'insect', parent:'megascorp',
+ icon:'🦂', color:'#78350f',
+ type:'Escorpión rey del desierto',
+ desc:'Domina territorios enteros. Los demás artrópodos le rinden tributo sin saberlo. El señor del desierto.',
+ biomes:['Desierto','Zona volcánica','Pradera árida'],
+ genes:{size:.62,speed:.58,cold:.05,heat:.98,aquatic:.04,intel:.35,repro:.58,armor:.82,stealth:.78,social:.08},
+ unlockCond:{pop:230,year:95},
+ children:[],
+ lore:'El Scorpking no necesita civilización. Ya es el rey. Sin corte, sin súbditos. Solo poder.'
+},
+{id:'crabking',    name:'Crabking',    tier:4, cat:'insect', parent:'megacrab',
+ icon:'🦀', color:'#7f1d1d',
+ type:'Cangrejo rey oceánico',
+ desc:'El mayor crustáceo. Controla arrecifes enteros. Primer artrópodo marino con territorio definido y defendido.',
+ biomes:['Arrecife','Costa profunda','Delta'],
+ genes:{size:.78,speed:.22,cold:.5,heat:.52,aquatic:.9,intel:.28,repro:.42,armor:.98,stealth:.18,social:.22},
+ unlockCond:{pop:220,year:92},
+ children:[],
+ lore:'El Crabking no nada. Camina por el fondo del mar. Y todo el fondo es suyo.'
+},
+{id:'chitinlord',  name:'Chitinlord',  tier:4, cat:'insect', parent:'beetleon',
+ icon:'🪲', color:'#052e16',
+ type:'Señor del exoesqueleto perfecto',
+ desc:'Quitina tan dura como el acero. Resiste temperaturas extremas, venenos y aplastamiento. Prácticamente indestructible.',
+ biomes:['Bosque','Jungla','Cueva','Desierto'],
+ genes:{size:.35,speed:.38,cold:.55,heat:.62,aquatic:.12,intel:.15,repro:.78,armor:.99,stealth:.42,social:.2},
+ unlockCond:{pop:210,year:90},
+ children:[],
+ lore:'El Chitinlord no puede ser aplastado. No puede ser envenenado. Solo puede ser ignorado. Y eso no le molesta.'
+},
+{id:'megafly',     name:'Megafly',     tier:4, cat:'insect', parent:'dragonfly',
+ icon:'🦋', color:'#0ea5e9',
+ type:'Insecto volador gigante depredador',
+ desc:'Envergadura de 1 metro. Depredador aéreo supremo entre los invertebrados. Caza dinosaurios jóvenes.',
+ biomes:['Pantano','Jungla','Bosque','Delta'],
+ genes:{size:.45,speed:.99,cold:.18,heat:.62,aquatic:.18,intel:.22,repro:.62,armor:.25,stealth:.52,social:.12},
+ unlockCond:{pop:200,year:88},
+ children:[],
+ lore:'La Megafly tiene un metro de envergadura. Y una velocidad que ningún ojo puede seguir.'
+},
+{id:'airpred',     name:'Airpred',     tier:4, cat:'insect', parent:'dragonfly',
+ icon:'🦋', color:'#7dd3fc',
+ type:'Depredador aéreo en enjambre',
+ desc:'Enjambres de miles que cazan en formación. El primer ataque coordinado en el aire. Diezman manadas enteras.',
+ biomes:['Pradera','Bosque','Jungla'],
+ genes:{size:.15,speed:.92,cold:.28,heat:.58,aquatic:.1,intel:.45,repro:.92,armor:.18,stealth:.55,social:.92},
+ unlockCond:{pop:220,year:92},
+ children:['swarmind'],
+ lore:'El Airpred solo es un insecto. Pero en enjambre de mil, es una tormenta.'
+},
+{id:'legionant',   name:'Legionant',   tier:4, cat:'insect', parent:'antqueen',
+ icon:'🪖', color:'#7c2d12',
+ type:'Hormiga legión guerrera',
+ desc:'Columnas de millones que arrasan todo. Sin miedo a la muerte. La primera guerra de exterminio de la historia.',
+ biomes:['Jungla','Pradera','Bosque','Desierto'],
+ genes:{size:.07,speed:.62,cold:.35,heat:.68,aquatic:.08,intel:.58,repro:.99,armor:.42,stealth:.48,social:.99},
+ unlockCond:{pop:310,year:110},
+ children:['antciv'],
+ lore:'La Legionant no tiene miedo. Individualmente, nada. Colectivamente, nadie puede detenerlas.'
+},
+{id:'insectgod',   name:'Insectgod',   tier:4, cat:'intelligent', parent:'swarmind',
+ icon:'🌐', color:'#84cc16',
+ type:'Superorganismo artrópodo omnisciente',
+ desc:'La convergencia de todas las civilizaciones artrópodas. Una red neuronal biológica global. El primer ser que abarca un continente entero.',
+ biomes:['Jungla','Bosque','Pradera','Cueva','Desierto'],
+ genes:{size:.03,speed:.82,cold:.55,heat:.72,aquatic:.15,intel:.99,repro:.99,armor:.55,stealth:.75,social:.99},
+ unlockCond:{pop:500,year:150},
+ children:[],
+ lore:'El Insectgod no tiene cuerpo. Es la tierra misma. Cada hormiga, cada abeja, cada escarabajo es una neurona. El planeta piensa.'
+},
+];
+
+// Build lookup
+const SP = {};
+SPECIES.forEach(s => SP[s.id] = s);
+
+// Show count
+document.addEventListener('DOMContentLoaded',()=>{
+  const el=document.getElementById('speciesCount');
+  if(el) el.textContent=SPECIES.length;
+});
+console.log('Total species:', SPECIES.length);
+
+// ══════════════════════════════════════════════════════════════
+//  CANVAS TREE RENDERER
+// ══════════════════════════════════════════════════════════════
+const canvas = document.getElementById('treeCanvas');
+const ctx = canvas.getContext('2d');
+let cam = { x: 0, y: 0, zoom: 1, drag: false, lx: 0, ly: 0 };
+let selectedId = null;
+let activeFilter = 'all';
+
+// Node layout positions
+let nodePositions = {};
+
+function layoutTree() {
+  // Separate arthropods from vertebrates
+  const arthroIds = new Set();
+  const findChildren = (id) => {
+    arthroIds.add(id);
+    const sp = SP[id];
+    if (sp && sp.children) sp.children.forEach(c => findChildren(c));
+  };
+  findChildren('primarthro');
+
+  // Group by tier, split by lineage
+  const vertTiers = {}, arthTiers = {};
+  SPECIES.forEach(s => {
+    if (arthroIds.has(s.id)) {
+      if (!arthTiers[s.tier]) arthTiers[s.tier] = [];
+      arthTiers[s.tier].push(s);
+    } else {
+      if (!vertTiers[s.tier]) vertTiers[s.tier] = [];
+      vertTiers[s.tier].push(s);
+    }
+  });
+
+  const TIER_X_SPACING = 280;
+  const NODE_Y_SPACING = 56;
+  const ARTHRO_Y_OFFSET = 1800; // arthropods below vertebrates
+
+  // Vertebrates
+  Object.entries(vertTiers).forEach(([tier, species]) => {
+    const x = parseInt(tier) * TIER_X_SPACING + 80;
+    const totalH = species.length * NODE_Y_SPACING;
+    species.forEach((s, i) => {
+      nodePositions[s.id] = {
+        x, y: i * NODE_Y_SPACING - totalH / 2 + NODE_Y_SPACING / 2,
+      };
+    });
+  });
+
+  // Arthropods — offset downward
+  Object.entries(arthTiers).forEach(([tier, species]) => {
+    const x = parseInt(tier) * TIER_X_SPACING + 80;
+    const totalH = species.length * NODE_Y_SPACING;
+    species.forEach((s, i) => {
+      nodePositions[s.id] = {
+        x, y: ARTHRO_Y_OFFSET + i * NODE_Y_SPACING - totalH / 2 + NODE_Y_SPACING / 2,
+      };
+    });
+  });
+}
+
+function getVisibleRect() {
+  const w = canvas.width;
+  const h = canvas.height;
+  return {
+    left: -cam.x / cam.zoom,
+    top: -cam.y / cam.zoom,
+    right: (w - cam.x) / cam.zoom,
+    bottom: (h - cam.y) / cam.zoom,
+  };
+}
+
+function worldToScreen(wx, wy) {
+  return {
+    x: wx * cam.zoom + cam.x + canvas.width / 2,
+    y: wy * cam.zoom + cam.y + canvas.height / 2,
+  };
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Background grid
+  ctx.fillStyle = '#04080a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Grid dots
+  const gridSize = 40 * cam.zoom;
+  const offX = (cam.x + canvas.width / 2) % gridSize;
+  const offY = (cam.y + canvas.height / 2) % gridSize;
+  ctx.fillStyle = 'rgba(255,255,255,.04)';
+  for (let x = offX; x < canvas.width; x += gridSize)
+    for (let y = offY; y < canvas.height; y += gridSize)
+      ctx.fillRect(x - 1, y - 1, 2, 2);
+
+  ctx.save();
+  ctx.translate(canvas.width / 2 + cam.x, canvas.height / 2 + cam.y);
+  ctx.scale(cam.zoom, cam.zoom);
+
+  // Section labels
+  ctx.font = `bold ${13/cam.zoom}px Cinzel, serif`;
+  ctx.fillStyle = 'rgba(74,222,128,.35)';
+  ctx.textAlign = 'left';
+  ctx.fillText('── VERTEBRADOS ──────────────────────────────────', 60, -900);
+  ctx.fillStyle = 'rgba(132,204,22,.35)';
+  ctx.fillText('── ARTRÓPODOS ───────────────────────────────────', 60, 860);
+
+  // Draw edges first
+  SPECIES.forEach(sp => {
+    if (!sp.children) return;
+    const from = nodePositions[sp.id];
+    if (!from) return;
+    sp.children.forEach(cid => {
+      const to = nodePositions[cid];
+      if (!to) return;
+      const child = SP[cid];
+      const hidden = activeFilter !== 'all' && sp.cat !== activeFilter && child.cat !== activeFilter;
+      if (hidden) return;
+
+      ctx.beginPath();
+      ctx.moveTo(from.x + 100, from.y);
+      const mx = (from.x + 100 + to.x) / 2;
+      ctx.bezierCurveTo(mx, from.y, mx, to.y, to.x, to.y);
+      ctx.strokeStyle = hidden ? 'rgba(255,255,255,.03)' : (sp.color + '44');
+      ctx.lineWidth = 1.5 / cam.zoom;
+      ctx.stroke();
+    });
+  });
+
+  // Draw nodes
+  SPECIES.forEach(sp => {
+    const pos = nodePositions[sp.id];
+    if (!pos) return;
+    const hidden = activeFilter !== 'all' && sp.cat !== activeFilter;
+    const isSelected = selectedId === sp.id;
+
+    const sx = pos.x, sy = pos.y;
+    const nw = 200, nh = 44;
+
+    if (hidden) {
+      ctx.globalAlpha = 0.15;
+    }
+
+    // Node background
+    ctx.beginPath();
+    ctx.roundRect(sx, sy - nh / 2, nw, nh, 8 / cam.zoom);
+    ctx.fillStyle = isSelected ? sp.color + '30' : 'rgba(8,18,14,.95)';
+    ctx.fill();
+    ctx.strokeStyle = isSelected ? sp.color : (sp.color + '55');
+    ctx.lineWidth = isSelected ? 2 / cam.zoom : 1 / cam.zoom;
+    ctx.stroke();
+
+    // Color bar left
+    ctx.fillStyle = sp.color;
+    ctx.fillRect(sx, sy - nh / 2, 4 / cam.zoom, nh);
+
+    // Icon
+    ctx.font = `${16 / cam.zoom}px serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(sp.icon, sx + 10 / cam.zoom, sy);
+
+    // Name
+    ctx.font = `600 ${11 / cam.zoom}px Crimson Pro, serif`;
+    ctx.fillStyle = isSelected ? sp.color : '#dff0e6';
+    ctx.fillText(sp.name, sx + 32 / cam.zoom, sy - 6 / cam.zoom);
+
+    // Type
+    ctx.font = `${8.5 / cam.zoom}px Crimson Pro, serif`;
+    ctx.fillStyle = 'rgba(107,155,122,.8)';
+    ctx.fillText(sp.type.substring(0, 26), sx + 32 / cam.zoom, sy + 7 / cam.zoom);
+
+    // Tier badge
+    const tierColors = ['#22d3ee','#4ade80','#f59e0b','#ef4444','#a78bfa'];
+    ctx.fillStyle = tierColors[sp.tier] || '#888';
+    ctx.font = `bold ${8 / cam.zoom}px monospace`;
+    ctx.textAlign = 'right';
+    ctx.fillText(`T${sp.tier}`, sx + nw - 6 / cam.zoom, sy);
+
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+  });
+
+  ctx.restore();
+}
+
+function hitTest(screenX, screenY) {
+  const wx = (screenX - canvas.width / 2 - cam.x) / cam.zoom;
+  const wy = (screenY - canvas.height / 2 - cam.y) / cam.zoom;
+  const nw = 200, nh = 44;
+  for (const sp of SPECIES) {
+    const pos = nodePositions[sp.id];
+    if (!pos) continue;
+    if (wx >= pos.x && wx <= pos.x + nw && wy >= pos.y - nh / 2 && wy <= pos.y + nh / 2) {
+      return sp.id;
+    }
+  }
+  return null;
+}
+
+// ── DETAIL PANEL ──
+function showDetail(id) {
+  const sp = SP[id];
+  if (!sp) return;
+  const panel = document.getElementById('detailPanel');
+
+  const GNAMES = { size:'Tamaño', speed:'Velocidad', cold:'Resist.Frío', heat:'Resist.Calor',
+    aquatic:'Acuático', intel:'Inteligencia', repro:'Reproducción', armor:'Armadura',
+    stealth:'Sigilo', social:'Sociabilidad' };
+  const GCOLS = { size:'#f87171', speed:'#fbbf24', cold:'#93c5fd', heat:'#fb923c',
+    aquatic:'#22d3ee', intel:'#c084fc', repro:'#4ade80', armor:'#a78bfa',
+    stealth:'#a3e635', social:'#fb7185' };
+
+  const catColors = { amphibian:'#22d3ee', reptile:'#4ade80', dinosaur:'#ef4444',
+    mammal:'#a78bfa', bird:'#f59e0b', aquatic:'#0ea5e9', intelligent:'#fb923c', insect:'#84cc16' };
+
+  const children = sp.children || [];
+  const parent = sp.parent ? SP[sp.parent] : null;
+
+  panel.innerHTML = `
+    <div class="dp-section">
+      <div style="font-size:36px;margin-bottom:6px">${sp.icon}</div>
+      <div class="dp-name" style="color:${sp.color}">${sp.name}</div>
+      <div class="dp-type">${sp.type}</div>
+      <div>
+        <span class="dp-tag" style="color:${catColors[sp.cat]||'#888'};border-color:${catColors[sp.cat]||'#888'}44;background:${catColors[sp.cat]||'#888'}11">
+          ${sp.cat}
+        </span>
+        <span class="dp-tag" style="color:#f59e0b;border-color:#f59e0b44;background:#f59e0b11">
+          Tier ${sp.tier}
+        </span>
+      </div>
+    </div>
+
+    <div class="dp-section">
+      <div class="dp-title">Descripción</div>
+      <div class="dp-desc">${sp.desc}</div>
+      <div style="font-size:11px;color:var(--text3);font-style:italic;line-height:1.5">"${sp.lore}"</div>
+    </div>
+
+    <div class="dp-section">
+      <div class="dp-title">Biomas preferidos</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">
+        ${sp.biomes.map(b=>`<span class="dp-tag" style="color:var(--accent2);border-color:rgba(34,211,238,.3);background:rgba(34,211,238,.08)">${b}</span>`).join('')}
+      </div>
+    </div>
+
+    <div class="dp-section">
+      <div class="dp-title">Genes</div>
+      ${Object.entries(sp.genes).map(([k,v])=>`
+        <div class="gene-row">
+          <div class="gene-lbl">${GNAMES[k]||k}</div>
+          <div class="gene-bar"><div class="gene-fill" style="width:${v*100}%;background:${GCOLS[k]||'#4ade80'}"></div></div>
+          <div class="gene-v">${Math.round(v*100)}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    ${sp.unlockCond ? `
+    <div class="dp-section">
+      <div class="dp-title">Condición de desbloqueo</div>
+      <div class="unlock-cond">
+        ${sp.unlockCond.pop?`👥 Población mínima: ${sp.unlockCond.pop}<br>`:''}
+        ${sp.unlockCond.year?`📅 Año mínimo: ${sp.unlockCond.year}<br>`:''}
+        ${sp.unlockCond.climate?`🌡️ Clima requerido: ${sp.unlockCond.climate}<br>`:''}
+        ${sp.unlockCond.biome?`🌍 Bioma: ${sp.unlockCond.biome}<br>`:''}
+        ${sp.unlockCond.gene?`🧬 Gen requerido: ${sp.unlockCond.gene}`:''}
+      </div>
+    </div>` : '<div class="dp-section"><div style="font-size:11px;color:var(--accent)">⭐ Especie inicial — disponible desde el principio</div></div>'}
+
+    ${parent ? `
+    <div class="dp-section">
+      <div class="dp-title">Ancestro</div>
+      <div class="child-chip" data-id="${parent.id}">
+        <span>${parent.icon}</span>
+        <span style="color:${parent.color};font-weight:600">${parent.name}</span>
+        <span style="color:var(--text3)">${parent.type}</span>
+      </div>
+    </div>` : ''}
+
+    ${children.length ? `
+    <div class="dp-section">
+      <div class="dp-title">Descendientes (${children.length})</div>
+      ${children.map(cid => {
+        const c = SP[cid];
+        if (!c) return '';
+        return `<div class="child-chip" data-id="${cid}">
+          <span>${c.icon}</span>
+          <div style="flex:1">
+            <div style="color:${c.color};font-weight:600">${c.name}</div>
+            <div style="color:var(--text3);font-size:10px">${c.type}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : '<div class="dp-section"><div style="font-size:11px;color:var(--text3)">Rama terminal — sin descendientes directos</div></div>'}
+  `;
+
+  // Click on child/parent chips
+  panel.querySelectorAll('.child-chip[data-id]').forEach(el => {
+    el.addEventListener('click', () => {
+      selectNode(el.dataset.id);
+      centerOn(el.dataset.id);
+    });
+  });
+}
+
+function selectNode(id) {
+  selectedId = id;
+  showDetail(id);
+  draw();
+}
+
+function centerOn(id) {
+  const pos = nodePositions[id];
+  if (!pos) return;
+  cam.x = -(pos.x + 100) * cam.zoom;
+  cam.y = -pos.y * cam.zoom;
+  draw();
+}
+
+// ── INPUT ──
+canvas.addEventListener('mousedown', e => {
+  cam.drag = true; cam.lx = e.clientX; cam.ly = e.clientY;
+  canvas.classList.add('dragging');
+});
+let dragMoved = false;
+canvas.addEventListener('mousemove', e => {
+  if (cam.drag) {
+    const dx = e.clientX - cam.lx, dy = e.clientY - cam.ly;
+    if (Math.abs(dx) + Math.abs(dy) > 3) dragMoved = true;
+    cam.x += dx; cam.y += dy;
+    cam.lx = e.clientX; cam.ly = e.clientY;
+    draw();
+  }
+});
+canvas.addEventListener('mouseup', e => {
+  cam.drag = false;
+  canvas.classList.remove('dragging');
+  if (!dragMoved) {
+    const hit = hitTest(e.clientX, e.clientY);
+    if (hit) selectNode(hit);
+  }
+  dragMoved = false;
+});
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY > 0 ? 0.9 : 1.1;
+  cam.zoom = Math.max(0.25, Math.min(4, cam.zoom * factor));
+  draw();
+}, { passive: false });
+
+// Touch
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    cam.drag = true; cam.lx = e.touches[0].clientX; cam.ly = e.touches[0].clientY; dragMoved = false;
+  }
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (e.touches.length === 1 && cam.drag) {
+    const dx = e.touches[0].clientX - cam.lx, dy = e.touches[0].clientY - cam.ly;
+    if (Math.abs(dx) + Math.abs(dy) > 5) dragMoved = true;
+    cam.x += dx; cam.y += dy;
+    cam.lx = e.touches[0].clientX; cam.ly = e.touches[0].clientY;
+    draw();
+  }
+}, { passive: true });
+canvas.addEventListener('touchend', e => {
+  cam.drag = false;
+  if (!dragMoved && e.changedTouches.length === 1) {
+    const t = e.changedTouches[0];
+    const hit = hitTest(t.clientX, t.clientY);
+    if (hit) selectNode(hit);
+  }
+  dragMoved = false;
+});
+
+// Tooltip on hover
+canvas.addEventListener('mousemove', e => {
+  if (cam.drag) return;
+  const hit = hitTest(e.clientX, e.clientY);
+  const tip = document.getElementById('tooltip');
+  if (hit) {
+    const sp = SP[hit];
+    tip.innerHTML = `<strong style="color:${sp.color}">${sp.icon} ${sp.name}</strong><br>${sp.type}<br><small style="color:#6a9b7a">${sp.biomes.join(' · ')}</small>`;
+    tip.style.left = (e.clientX + 14) + 'px';
+    tip.style.top = (e.clientY - 10) + 'px';
+    tip.classList.add('show');
+  } else {
+    tip.classList.remove('show');
+  }
+});
+
+// Buttons
+document.getElementById('btnReset').addEventListener('click', () => {
+  cam.x = 0; cam.y = 0; cam.zoom = 0.7; draw();
+});
+document.getElementById('btnZoomIn').addEventListener('click', () => {
+  cam.zoom = Math.min(4, cam.zoom * 1.2); draw();
+});
+document.getElementById('btnZoomOut').addEventListener('click', () => {
+  cam.zoom = Math.max(0.25, cam.zoom * 0.8); draw();
+});
+
+// Filters
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    activeFilter = chip.dataset.f;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    draw();
+  });
+});
+
+// ── INIT ──
+function resize() {
+  canvas.width = window.innerWidth - 260;
+  canvas.height = window.innerHeight - 88;
+  draw();
+}
+window.addEventListener('resize', resize);
+layoutTree();
+resize();
+cam.zoom = 0.65;
+cam.x = 40;
+cam.y = 0;
+draw();
+</script>
+</body>
+</html>

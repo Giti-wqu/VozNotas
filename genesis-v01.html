@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Genesis v0.1</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#060c0a; --panel:rgba(6,14,10,.96); --border:rgba(60,160,90,.15);
+  --accent:#4ade80; --accent2:#22d3ee; --accent3:#f59e0b;
+  --text:#dff0e6; --text2:#6a9b7a; --text3:#2d5a3d;
+  --gold:#f59e0b; --red:#ef4444; --purple:#a78bfa;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Crimson Pro',serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw;user-select:none;}
+
+/* ── WORLD ── */
+#worldCanvas{position:fixed;inset:0;}
+
+/* ── TOP ── */
+#topBar{
+  position:fixed;top:0;left:0;right:0;height:50px;z-index:100;
+  background:linear-gradient(to bottom,rgba(6,12,10,.98),rgba(6,12,10,.5));
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 12px;gap:0;
+}
+.gtitle{font-family:'Cinzel',serif;font-size:18px;font-weight:700;background:linear-gradient(135deg,#4ade80,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-right:16px;white-space:nowrap;}
+.tstat{display:flex;flex-direction:column;align-items:center;padding:0 12px;border-right:1px solid var(--border);min-width:72px;}
+.tstat-l{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;}
+.tstat-v{font-size:14px;font-weight:600;color:var(--accent);}
+.tstat-v.yr{color:var(--accent3);}
+.spacer{flex:1;}
+.spd-btn{width:26px;height:26px;border-radius:5px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text2);cursor:pointer;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:3px;transition:all .2s;}
+.spd-btn.active{background:rgba(74,222,128,.2);border-color:var(--accent);color:var(--accent);}
+.tbtn{padding:5px 12px;border-radius:7px;font-family:'Crimson Pro',serif;font-size:12px;font-weight:600;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;transition:all .2s;margin-left:8px;}
+.tbtn:hover{background:rgba(74,222,128,.12);border-color:var(--accent);}
+.tbtn.pause{background:rgba(245,158,11,.12);border-color:var(--accent3);color:var(--accent3);}
+.tbtn.paused{background:rgba(74,222,128,.18);border-color:var(--accent);color:var(--accent);}
+
+/* ── LEFT: TREE ── */
+#leftPanel{position:fixed;left:0;top:50px;bottom:34px;width:240px;background:var(--panel);border-right:1px solid var(--border);z-index:50;overflow-y:auto;overflow-x:hidden;}
+#leftPanel::-webkit-scrollbar{width:3px;}
+#leftPanel::-webkit-scrollbar-thumb{background:var(--border);}
+.psec{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);}
+.ptitle{font-family:'Cinzel',serif;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;}
+
+/* ── TREE NODES ── */
+.tree-wrap{padding:8px 6px;}
+.tree-node{
+  position:relative;margin-bottom:3px;
+}
+.tree-node-inner{
+  display:flex;align-items:center;gap:7px;
+  padding:7px 10px;border-radius:9px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.02);
+  transition:all .25s;position:relative;overflow:hidden;
+}
+.tree-node-inner:hover:not(.locked){border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.06);}
+.tree-node-inner.active{border-color:var(--accent);background:rgba(74,222,128,.12);}
+.tree-node-inner.locked{opacity:.35;cursor:not-allowed;filter:grayscale(.8);}
+.tree-node-inner.extinct{opacity:.25;filter:grayscale(1);cursor:not-allowed;}
+.tree-node-inner.available{border-color:rgba(245,158,11,.5);background:rgba(245,158,11,.08);animation:avail 1.5s ease infinite alternate;}
+@keyframes avail{from{box-shadow:0 0 0 0 rgba(245,158,11,.2)}to{box-shadow:0 0 8px 2px rgba(245,158,11,.3)}}
+
+.node-icon{font-size:18px;flex-shrink:0;}
+.node-info{flex:1;min-width:0;}
+.node-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.node-type{font-size:9px;color:var(--text3);}
+.node-pop{font-size:11px;font-weight:700;color:var(--accent);margin-left:auto;flex-shrink:0;}
+.node-lock{font-size:12px;margin-left:auto;}
+
+.tree-indent{margin-left:16px;border-left:1px solid rgba(255,255,255,.07);padding-left:8px;}
+.tree-branch-label{font-size:9px;color:var(--text3);padding:3px 6px;letter-spacing:.5px;}
+
+/* Unlock button */
+.unlock-btn{
+  width:100%;margin-top:3px;padding:5px;border-radius:7px;
+  border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.1);
+  color:var(--accent3);font-family:'Crimson Pro',serif;font-size:11px;
+  cursor:pointer;transition:all .2s;
+}
+.unlock-btn:hover{background:rgba(245,158,11,.2);}
+
+/* ── RIGHT ── */
+#rightPanel{position:fixed;right:0;top:50px;bottom:34px;width:210px;background:var(--panel);border-left:1px solid var(--border);z-index:50;overflow-y:auto;}
+#rightPanel::-webkit-scrollbar{width:3px;}
+#rightPanel::-webkit-scrollbar-thumb{background:var(--border);}
+
+/* Divine energy */
+.divine-wrap{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);}
+.divine-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.divine-title{font-family:'Cinzel',serif;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:2px;}
+.divine-val{font-size:13px;font-weight:700;color:var(--accent3);}
+.divine-bar{height:7px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden;margin-bottom:4px;}
+.divine-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#b45309,#f59e0b,#fbbf24);transition:width .4s ease;}
+.divine-hint{font-size:9px;color:var(--text3);}
+
+/* Powers */
+.power-btn{
+  width:100%;padding:7px 10px;border-radius:8px;
+  border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);
+  color:var(--text);font-family:'Crimson Pro',serif;font-size:11px;
+  cursor:pointer;transition:all .2s;text-align:left;
+  display:flex;align-items:center;gap:7px;margin-bottom:5px;
+}
+.power-btn:hover:not(:disabled){background:rgba(245,158,11,.1);border-color:var(--accent3);}
+.power-btn:disabled{opacity:.3;cursor:not-allowed;}
+.pcost{margin-left:auto;font-size:10px;color:var(--accent3);white-space:nowrap;}
+
+/* Genes */
+.gene-row{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.gene-lbl{font-size:9px;color:var(--text3);width:72px;flex-shrink:0;}
+.gene-bar{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.07);overflow:hidden;}
+.gene-fill{height:100%;border-radius:2px;transition:width .5s;}
+.gene-v{font-size:9px;color:var(--text2);width:22px;text-align:right;}
+
+/* Events */
+.ev-item{padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.03);font-size:10px;line-height:1.5;}
+.ev-yr{font-size:9px;color:var(--accent3);margin-bottom:1px;}
+.ev-txt{color:var(--text2);}
+.ev-item.good .ev-txt{color:#4ade80;}
+.ev-item.bad  .ev-txt{color:#ef4444;}
+.ev-item.neut .ev-txt{color:#22d3ee;}
+.ev-item.warn .ev-txt{color:#f59e0b;}
+
+/* Biome label on creature */
+/* ── BOTTOM ── */
+#bottomBar{
+  position:fixed;bottom:0;left:240px;right:210px;height:34px;
+  background:linear-gradient(to top,rgba(6,12,10,.98),transparent);
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;padding:0 14px;gap:14px;z-index:50;
+}
+.bk{padding:1px 5px;border-radius:3px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);font-size:9px;color:var(--text2);font-family:monospace;}
+.bhint{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);}
+
+/* Notifications */
+#notif{position:fixed;top:62px;left:50%;transform:translateX(-50%);background:rgba(6,14,10,.97);border:1px solid var(--accent);border-radius:50px;padding:7px 18px;font-size:12px;z-index:300;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;}
+#notif.show{opacity:1;}
+
+/* ── TIMED EVENT CARDS ── */
+#eventCards{
+  position:fixed;bottom:42px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;gap:8px;align-items:center;
+  z-index:200;pointer-events:none;
+  width:min(560px,calc(100vw - 480px));
+}
+.ev-card{
+  width:100%;
+  background:rgba(6,14,10,.97);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:14px;
+  overflow:hidden;
+  pointer-events:all;
+  animation:slideUp .3s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 8px 32px rgba(0,0,0,.6);
+}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.ev-card.urgent{border-color:rgba(239,68,68,.5);}
+.ev-card.warn{border-color:rgba(245,158,11,.4);}
+.ev-card.good{border-color:rgba(74,222,128,.4);}
+
+.ev-card-timer{
+  height:3px;
+  transition:width .1s linear;
+}
+.ev-card.urgent .ev-card-timer{background:#ef4444;}
+.ev-card.warn   .ev-card-timer{background:#f59e0b;}
+.ev-card.good   .ev-card-timer{background:#4ade80;}
+.ev-card.neut   .ev-card-timer{background:#22d3ee;}
+
+.ev-card-body{padding:10px 14px;}
+.ev-card-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.ev-card-icon{font-size:20px;flex-shrink:0;}
+.ev-card-title{font-size:13px;font-weight:700;flex:1;line-height:1.3;}
+.ev-card-yr{font-size:9px;color:var(--text3);white-space:nowrap;}
+.ev-card-desc{font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5;}
+.ev-card-opts{display:flex;gap:6px;flex-wrap:wrap;}
+.ev-opt-btn{
+  flex:1;min-width:100px;
+  padding:7px 10px;border-radius:9px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04);
+  color:var(--text);font-family:'Crimson Pro',serif;font-size:11px;
+  cursor:pointer;transition:all .2s;text-align:left;line-height:1.4;
+}
+.ev-opt-btn:hover{border-color:var(--accent);background:rgba(74,222,128,.1);}
+.ev-opt-btn .opt-label{font-weight:700;display:block;margin-bottom:2px;}
+.ev-opt-btn .opt-effect{font-size:10px;color:var(--text3);}
+.ev-opt-btn.danger:hover{border-color:#ef4444;background:rgba(239,68,68,.08);}
+.ev-opt-btn.risky:hover{border-color:#f59e0b;background:rgba(245,158,11,.08);}
+.ev-opt-btn.safe:hover{border-color:#22d3ee;background:rgba(34,211,238,.08);}
+
+/* Choose branch modal */
+#branchModal{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;}
+#branchModal.open{opacity:1;pointer-events:all;}
+.bm-box{background:#060e0a;border:1px solid var(--accent);border-radius:20px;padding:28px;max-width:480px;width:90%;}
+.bm-title{font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:var(--accent);margin-bottom:6px;}
+.bm-sub{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;}
+.bm-options{display:flex;flex-direction:column;gap:10px;}
+.bm-opt{
+  padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04);cursor:pointer;transition:all .25s;
+  display:flex;align-items:flex-start;gap:12px;
+}
+.bm-opt:hover{border-color:var(--accent);background:rgba(74,222,128,.08);}
+.bm-opt-icon{font-size:28px;flex-shrink:0;}
+.bm-opt-name{font-size:15px;font-weight:700;margin-bottom:3px;}
+.bm-opt-desc{font-size:12px;color:var(--text2);line-height:1.5;}
+.bm-opt-cost{font-size:11px;color:var(--accent3);margin-top:4px;}
+.bm-skip{width:100%;margin-top:12px;padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:transparent;color:var(--text3);font-family:'Crimson Pro',serif;font-size:12px;cursor:pointer;}
+
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);}
+</style>
+</head>
+<body>
+<canvas id="worldCanvas"></canvas>
+
+<!-- TOP -->
+<div id="topBar">
+  <div class="gtitle">⚗ GENESIS</div>
+  <div class="tstat"><span class="tstat-l">Año</span><span class="tstat-v yr" id="sYear">1</span></div>
+  <div class="tstat"><span class="tstat-l">Especies vivas</span><span class="tstat-v" id="sSpecies">1</span></div>
+  <div class="tstat"><span class="tstat-l">Población total</span><span class="tstat-v" id="sPop">0</span></div>
+  <div class="tstat"><span class="tstat-l">Clima</span><span class="tstat-v" style="font-size:11px" id="sClimate">🌤 Templado</span></div>
+  <div class="spacer"></div>
+  <span style="font-size:10px;color:var(--text3);margin-right:5px">Vel:</span>
+  <button class="spd-btn active" data-s="1">1x</button>
+  <button class="spd-btn" data-s="2">2x</button>
+  <button class="spd-btn" data-s="5">5x</button>
+  <button class="tbtn pause" id="btnPause">⏸ Pausa</button>
+</div>
+
+<!-- LEFT: EVOLUTIONARY TREE -->
+<div id="leftPanel">
+  <div class="psec">
+    <div class="ptitle">🧬 Árbol Evolutivo</div>
+    <div class="tree-wrap" id="treeWrap"></div>
+  </div>
+  <div class="psec" id="genesSection" style="display:none">
+    <div class="ptitle">🔬 Genes — <span id="genesSpName" style="color:var(--accent)"></span></div>
+    <div id="genesList"></div>
+    <div id="mutationsList" style="margin-top:6px"></div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div id="rightPanel">
+  <div class="divine-wrap">
+    <div class="divine-header">
+      <span class="divine-title">⚡ Energía Divina</span>
+      <span class="divine-val"><span id="dVal">0</span>/100</span>
+    </div>
+    <div class="divine-bar"><div class="divine-fill" id="dFill" style="width:0%"></div></div>
+    <div class="divine-hint">Se gana cuando tu especie elegida crece</div>
+  </div>
+
+  <div class="psec">
+    <div class="ptitle">⚡ Poderes Divinos</div>
+    <button class="power-btn" id="pw0" onclick="usePow(0)">🧬 Acelerar mutación<span class="pcost">20⚡</span></button>
+    <button class="power-btn" id="pw1" onclick="usePow(1)">🌡️ Forzar cambio climático<span class="pcost">30⚡</span></button>
+    <button class="power-btn" id="pw2" onclick="usePow(2)">🌱 Fertilizar territorio<span class="pcost">15⚡</span></button>
+    <button class="power-btn" id="pw3" onclick="usePow(3)">🛡️ Proteger de extinción<span class="pcost">25⚡</span></button>
+    <button class="power-btn" id="pw4" onclick="usePow(4)">👑 Guiar evolución<span class="pcost">40⚡</span></button>
+    <button class="power-btn" id="pw5" onclick="usePow(5)">☄️ Cataclismo rival<span class="pcost">50⚡</span></button>
+  </div>
+
+  <div class="psec">
+    <div class="ptitle">📜 Eventos</div>
+    <div id="evLog"></div>
+  </div>
+</div>
+
+<!-- BOTTOM -->
+<div id="bottomBar">
+  <div class="bhint"><span class="bk">Clic árbol</span>Elegir especie</div>
+  <div class="bhint"><span class="bk">Espacio</span>Pausar</div>
+  <div class="bhint"><span class="bk">Scroll</span>Zoom mundo</div>
+  <div class="bhint"><span class="bk">Drag</span>Mover vista</div>
+  <div class="bhint" style="margin-left:auto;color:var(--accent3)">⚠️ Los eventos tienen tiempo limitado</div>
+</div>
+
+<div id="notif"></div>
+<div id="eventCards"></div>
+
+<!-- BRANCH CHOICE MODAL -->
+<div id="branchModal">
+  <div class="bm-box">
+    <div class="bm-title" id="bmTitle">🌿 Bifurcación Evolutiva</div>
+    <div class="bm-sub" id="bmSub">Tu especie ha alcanzado un punto crítico. Elige su siguiente forma:</div>
+    <div class="bm-options" id="bmOptions"></div>
+    <button class="bm-skip" id="bmSkip">Decidir más tarde</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  EVOLUTIONARY TREE — 20 SPECIES
+// ══════════════════════════════════════════
+// Each species: id, name, type, icon, color, desc, parent, unlockCost,
+// unlockCondition, genes, biomes[], preferTemp
+const BIOMES = ['Océano','Playa','Jungla','Pantano','Bosque','Pradera','Desierto','Tundra','Montaña'];
+const B = {OCN:0,BCH:1,JNG:2,SWP:3,FOR:4,GRS:5,DST:6,TND:7,MTN:8};
+
+const TREE = [
+  // ── TIER 0: ORIGIN ──
+  {
+    id:'glypthar', name:'Glypthar', parent:null, tier:0,
+    type:'Anfibio primitivo', icon:'🐟', color:'#22d3ee',
+    desc:'El primer ser. Vive entre el agua y la tierra húmeda.',
+    genes:{size:.2,speed:.3,cold:.2,heat:.3,aquatic:.8,intel:.1,repro:.9,armor:.1},
+    biomes:[B.BCH,B.SWP,B.JNG], preferTemp:20,
+    unlockCost:0, unlockCondition:null,
+    children:['vorrkai','aqueln'],
+  },
+  // ── TIER 1 ──
+  {
+    id:'vorrkai', name:'Vorrkai', parent:'glypthar', tier:1,
+    type:'Reptil terrestre', icon:'🦎', color:'#4ade80',
+    desc:'Abandona el agua. Piel escamosa, resistente al calor.',
+    genes:{size:.35,speed:.5,cold:.2,heat:.55,aquatic:.2,intel:.2,repro:.75,armor:.35},
+    biomes:[B.GRS,B.FOR,B.JNG], preferTemp:24,
+    unlockCost:20, unlockCondition:{pop:80},
+    children:['drakmur','umbrath'],
+  },
+  {
+    id:'aqueln', name:'Aqueln', parent:'glypthar', tier:1,
+    type:'Anfibio acuático', icon:'🐊', color:'#06b6d4',
+    desc:'Se adapta al agua profunda. Extremidades palmeadas.',
+    genes:{size:.4,speed:.4,cold:.3,heat:.3,aquatic:.95,intel:.15,repro:.8,armor:.25},
+    biomes:[B.OCN,B.BCH,B.SWP], preferTemp:18,
+    unlockCost:20, unlockCondition:{pop:80},
+    children:['marphyn','selphyn'],
+  },
+  // ── TIER 2 ──
+  {
+    id:'drakmur', name:'Drakmur', parent:'vorrkai', tier:2,
+    type:'Reptil depredador', icon:'🐉', color:'#ef4444',
+    desc:'Mandíbulas poderosas. El primer gran cazador terrestre.',
+    genes:{size:.7,speed:.55,cold:.25,heat:.7,aquatic:.05,intel:.3,repro:.35,armor:.6},
+    biomes:[B.GRS,B.DST,B.FOR], preferTemp:28,
+    unlockCost:30, unlockCondition:{pop:150,year:30},
+    children:['tyranak','velshir'],
+  },
+  {
+    id:'umbrath', name:'Umbrath', parent:'vorrkai', tier:2,
+    type:'Reptil excavador', icon:'🦔', color:'#a78bfa',
+    desc:'Vive bajo tierra. Evita depredadores. Gran reproductividad.',
+    genes:{size:.25,speed:.3,cold:.65,heat:.2,aquatic:.1,intel:.25,repro:.95,armor:.4},
+    biomes:[B.GRS,B.FOR,B.TND], preferTemp:12,
+    unlockCost:25, unlockCondition:{pop:120,year:25},
+    children:['morvath','keldrix'],
+  },
+  {
+    id:'marphyn', name:'Marphyn', parent:'aqueln', tier:2,
+    type:'Pez-mamífero primitivo', icon:'🐋', color:'#0ea5e9',
+    desc:'Grande y lento. Domina los mares cálidos.',
+    genes:{size:.8,speed:.25,cold:.4,heat:.5,aquatic:.98,intel:.35,repro:.3,armor:.5},
+    biomes:[B.OCN,B.BCH], preferTemp:22,
+    unlockCost:25, unlockCondition:{pop:100,year:20},
+    children:['leviath'],
+  },
+  {
+    id:'selphyn', name:'Selphyn', parent:'aqueln', tier:2,
+    type:'Anfibio omnívoro ágil', icon:'🐸', color:'#34d399',
+    desc:'Vuelve a tierra con nuevas capacidades. Muy adaptable.',
+    genes:{size:.3,speed:.6,cold:.4,heat:.45,aquatic:.6,intel:.4,repro:.8,armor:.2},
+    biomes:[B.SWP,B.FOR,B.BCH,B.JNG], preferTemp:20,
+    unlockCost:25, unlockCondition:{pop:100,year:20},
+    children:['zylthari','pyronar'],
+  },
+  // ── TIER 3 ──
+  {
+    id:'tyranak', name:'Tyranak', parent:'drakmur', tier:3,
+    type:'Dinosaurio bípedo', icon:'🦕', color:'#dc2626',
+    desc:'El mayor depredador de su era. Domina praderas y junglas.',
+    genes:{size:.95,speed:.5,cold:.2,heat:.75,aquatic:.0,intel:.3,repro:.2,armor:.7},
+    biomes:[B.GRS,B.JNG,B.DST], preferTemp:30,
+    unlockCost:40, unlockCondition:{pop:200,year:60},
+    children:['gorathex'],
+  },
+  {
+    id:'velshir', name:'Velshir', parent:'drakmur', tier:3,
+    type:'Dinosaurio ágil veloz', icon:'🦖', color:'#f97316',
+    desc:'Pequeño y rapidísimo. Caza en manada. Precursor de las aves.',
+    genes:{size:.45,speed:.9,cold:.3,heat:.65,aquatic:.0,intel:.5,repro:.55,armor:.3},
+    biomes:[B.GRS,B.FOR,B.MTN], preferTemp:25,
+    unlockCost:40, unlockCondition:{pop:200,year:60},
+    children:['kyravel'],
+  },
+  {
+    id:'morvath', name:'Morvath', parent:'umbrath', tier:3,
+    type:'Mamífero nocturno', icon:'🦇', color:'#8b5cf6',
+    desc:'Primer mamífero real. Sangre caliente. Sobrevive al frío.',
+    genes:{size:.2,speed:.65,cold:.75,heat:.3,aquatic:.05,intel:.55,repro:.7,armor:.15},
+    biomes:[B.FOR,B.MTN,B.TND], preferTemp:8,
+    unlockCost:35, unlockCondition:{pop:180,year:50},
+    children:['zylthari'],
+  },
+  {
+    id:'keldrix', name:'Keldrix', parent:'umbrath', tier:3,
+    type:'Reptil acorazado', icon:'🐢', color:'#65a30d',
+    desc:'Caparazón duro como roca. Lento pero casi indestructible.',
+    genes:{size:.5,speed:.15,cold:.6,heat:.4,aquatic:.3,intel:.2,repro:.4,armor:.98},
+    biomes:[B.GRS,B.FOR,B.BCH,B.TND], preferTemp:14,
+    unlockCost:30, unlockCondition:{pop:150,year:45},
+    children:[],
+  },
+  {
+    id:'leviath', name:'Leviath', parent:'marphyn', tier:3,
+    type:'Leviatán oceánico', icon:'🐳', color:'#0369a1',
+    desc:'Ser colosal de las profundidades. Inteligencia emergente.',
+    genes:{size:.99,speed:.2,cold:.7,heat:.35,aquatic:.99,intel:.6,repro:.15,armor:.65},
+    biomes:[B.OCN], preferTemp:15,
+    unlockCost:40, unlockCondition:{pop:120,year:55},
+    children:[],
+  },
+  {
+    id:'zylthari', name:'Zylthari', parent:'selphyn', tier:3,
+    type:'Mamífero omnívoro social', icon:'🦊', color:'#fb923c',
+    desc:'Usa herramientas rudimentarias. Vive en grupos. El despertar.',
+    genes:{size:.4,speed:.6,cold:.5,heat:.5,aquatic:.2,intel:.78,repro:.55,armor:.2},
+    biomes:[B.FOR,B.GRS,B.BCH], preferTemp:18,
+    unlockCost:35, unlockCondition:{pop:160,year:50},
+    children:['narvek','syndari'],
+  },
+  {
+    id:'pyronar', name:'Pyronar', parent:'selphyn', tier:3,
+    type:'Ave depredadora', icon:'🦅', color:'#fbbf24',
+    desc:'Primer ser alado. Domina cielos y montañas.',
+    genes:{size:.45,speed:.95,cold:.4,heat:.7,aquatic:.05,intel:.45,repro:.45,armor:.25},
+    biomes:[B.MTN,B.DST,B.GRS], preferTemp:22,
+    unlockCost:35, unlockCondition:{pop:160,year:50},
+    children:['stryxar'],
+  },
+  // ── TIER 4 ──
+  {
+    id:'gorathex', name:'Gorathex', parent:'tyranak', tier:4,
+    type:'Dinosaurio acorazado alfa', icon:'🦏', color:'#b91c1c',
+    desc:'Fusión de fuerza bruta y armadura. El rey indiscutible.',
+    genes:{size:.99,speed:.3,cold:.25,heat:.8,aquatic:.0,intel:.35,repro:.15,armor:.95},
+    biomes:[B.GRS,B.DST,B.JNG], preferTemp:32,
+    unlockCost:55, unlockCondition:{pop:300,year:100},
+    children:[],
+  },
+  {
+    id:'kyravel', name:'Kyravel', parent:'velshir', tier:4,
+    type:'Ave-dinosaurio plumada', icon:'🦜', color:'#ea580c',
+    desc:'Plumas proto-ala. Inteligencia elevada. Comunicación vocal.',
+    genes:{size:.35,speed:.85,cold:.5,heat:.6,aquatic:.0,intel:.65,repro:.5,armor:.2},
+    biomes:[B.FOR,B.JNG,B.MTN], preferTemp:20,
+    unlockCost:50, unlockCondition:{pop:250,year:90},
+    children:['stryxar'],
+  },
+  {
+    id:'narvek', name:'Narvek', parent:'zylthari', tier:4,
+    type:'Primate primitivo', icon:'🐒', color:'#92400e',
+    desc:'Bípedo ocasional. Lenguaje de señas. Piedra y palo.',
+    genes:{size:.45,speed:.55,cold:.45,heat:.55,aquatic:.1,intel:.88,repro:.5,armor:.15},
+    biomes:[B.JNG,B.FOR,B.MTN], preferTemp:22,
+    unlockCost:50, unlockCondition:{pop:220,year:85},
+    children:['syndari'],
+  },
+  {
+    id:'syndari', name:'Syndari', parent:'narvek', tier:4,
+    type:'Homínido pensante', icon:'🧠', color:'#7c3aed',
+    desc:'Fuego, lenguaje, memoria. El umbral de la civilización.',
+    genes:{size:.5,speed:.5,cold:.6,heat:.6,aquatic:.15,intel:.97,repro:.45,armor:.1},
+    biomes:[B.GRS,B.FOR,B.BCH,B.MTN], preferTemp:18,
+    unlockCost:65, unlockCondition:{pop:250,year:100},
+    children:[],
+  },
+  {
+    id:'stryxar', name:'Stryxar', parent:'kyravel', tier:4,
+    type:'Ave inteligente social', icon:'🦢', color:'#d97706',
+    desc:'Construye nidos comunales. Transmite conocimiento entre generaciones.',
+    genes:{size:.4,speed:.8,cold:.55,heat:.55,aquatic:.1,intel:.75,repro:.4,armor:.15},
+    biomes:[B.GRS,B.FOR,B.BCH,B.MTN], preferTemp:19,
+    unlockCost:55, unlockCondition:{pop:230,year:90},
+    children:[],
+  },
+  {
+    id:'velmori', name:'Velmori', parent:'morvath', tier:4,
+    type:'Mamífero ártico avanzado', icon:'🐺', color:'#bfdbfe',
+    desc:'Pelaje denso. Caza cooperativa. Domina las tundras heladas.',
+    genes:{size:.55,speed:.75,cold:.95,heat:.2,aquatic:.1,intel:.65,repro:.45,armor:.3},
+    biomes:[B.TND,B.MTN,B.FOR], preferTemp:2,
+    unlockCost:45, unlockCondition:{pop:180,year:70},
+    children:[],
+  },
+];
+
+// Build lookup
+const SP = {}; TREE.forEach(s => SP[s.id] = s);
+
+// ══════════════════════════════════════════
+//  CLIMATES
+// ══════════════════════════════════════════
+const CLIMATES = [
+  {name:'Templado',icon:'🌤',temp:18,humid:.6,dur:100},
+  {name:'Cálido húmedo',icon:'🌿',temp:26,humid:.8,dur:80},
+  {name:'Árido',icon:'☀️',temp:36,humid:.2,dur:60},
+  {name:'Lluvioso',icon:'🌧️',temp:22,humid:.95,dur:70},
+  {name:'Frío',icon:'🌨️',temp:4,humid:.5,dur:65},
+  {name:'Glacial',icon:'❄️',temp:-6,humid:.3,dur:45},
+  {name:'Volcánico',icon:'🌋',temp:30,humid:.4,dur:35},
+];
+
+// ══════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════
+let G = {
+  year:1, tick:0, paused:false, speed:1,
+  divine:0,
+  climIdx:0, climTick:0,
+  activeSpecies:{'glypthar':{
+    ...JSON.parse(JSON.stringify(SP['glypthar'])),
+    population:30, maxPop:400, extinct:false, protected:false,
+    mutations:[], popPrev:30,
+  }},
+  chosen:'glypthar', // player's chosen species
+  pendingBranch:null,
+  unlockedIds:new Set(['glypthar']),
+};
+
+// Creatures array for visual
+let creatures = [];
+
+// Camera
+let cam = {x:0,y:0,zoom:1,drag:false,lx:0,ly:0};
+
+// ══════════════════════════════════════════
+//  CANVAS
+// ══════════════════════════════════════════
+const canvas = document.getElementById('worldCanvas');
+const ctx = canvas.getContext('2d');
+
+const BIOME_COLORS = ['#0a3d6b','#c9a96e','#1a5c2a','#3a6b4a','#2d7a3a','#6aaa4a','#d4a843','#a8c8d8','#7a7a8a'];
+const BIOME_DARK   = ['#061e38','#7a6040','#0d3318','#1e3d28','#1a4a22','#3d6a28','#8a6a20','#5a7888','#3a3a48'];
+
+// World grid (simplified visual)
+let worldGrid = [];
+const GW = 100, GH = 65, CELL = 12;
+
+function generateWorld(){
+  worldGrid = [];
+  for(let r=0;r<GH;r++){
+    worldGrid[r]=[];
+    for(let c=0;c<GW;c++){
+      // noise layers
+      const n1 = noise2(c/18,r/18);
+      const n2 = noise2(c/9+50,r/9+50)*.5;
+      const n3 = noise2(c/4+100,r/4+100)*.25;
+      let h = n1+n2+n3;
+      // island falloff
+      const dx=(c-GW/2)/(GW/2), dy=(r-GH/2)/(GH/2);
+      h -= Math.sqrt(dx*dx+dy*dy)*.5;
+
+      const moist = noise2(c/15+200,r/15+200);
+      const temp  = noise2(c/20+400,r/20+400);
+
+      let biome;
+      if(h<-.08) biome=B.OCN;
+      else if(h<.06) biome=B.BCH;
+      else if(h>.42) biome=B.MTN;
+      else if(temp>.68&&moist<.32) biome=B.DST;
+      else if(moist>.65&&temp>.42) biome=B.JNG;
+      else if(moist>.6) biome=B.SWP;
+      else if(temp<.28) biome=B.TND;
+      else if(moist>.4) biome=B.FOR;
+      else biome=B.GRS;
+
+      worldGrid[r][c]={biome, h, moist, temp};
+    }
+  }
+}
+
+// Simple value noise
+function noise2(x,y){
+  const xi=Math.floor(x),yi=Math.floor(y);
+  const xf=x-xi,yf=y-yi;
+  const h=(vx,vy)=>{let n=Math.sin(vx*127.1+vy*311.7)*43758.5453123;return n-Math.floor(n);};
+  const a=h(xi,yi),b=h(xi+1,yi),c=h(xi,yi+1),d=h(xi+1,yi+1);
+  const sx=xf*xf*(3-2*xf),sy=yf*yf*(3-2*yf);
+  return a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy;
+}
+
+// Pre-render world
+let worldOC = null;
+function buildWorldCache(){
+  worldOC = document.createElement('canvas');
+  worldOC.width=GW*CELL; worldOC.height=GH*CELL;
+  const oc=worldOC.getContext('2d');
+  for(let r=0;r<GH;r++){
+    for(let c=0;c<GW;c++){
+      const {biome,h}=worldGrid[r][c];
+      // base color
+      oc.fillStyle=BIOME_COLORS[biome];
+      oc.fillRect(c*CELL,r*CELL,CELL,CELL);
+      // height shading
+      if(biome!==B.OCN){
+        oc.fillStyle=`rgba(0,0,0,${Math.max(0,.15-h*.1)})`;
+        oc.fillRect(c*CELL,r*CELL,CELL,CELL);
+      }
+      // subtle grid
+      oc.fillStyle='rgba(0,0,0,.07)';
+      oc.fillRect(c*CELL,r*CELL,1,1);
+    }
+  }
+}
+
+function spawnCreatures(){
+  creatures=[];
+  Object.values(G.activeSpecies).forEach(sp=>{
+    if(sp.extinct) return;
+    const count=Math.max(1,Math.floor(sp.population/6));
+    const def=SP[sp.id];
+    for(let i=0;i<count;i++){
+      let tries=0;
+      while(tries++<40){
+        const r=Math.floor(Math.random()*GH);
+        const c=Math.floor(Math.random()*GW);
+        if(def.biomes.includes(worldGrid[r][c].biome)){
+          creatures.push({id:sp.id,r:r+Math.random(),c:c+Math.random(),
+            vr:(Math.random()-.5)*.2,vc:(Math.random()-.5)*.2,age:Math.random()*20});
+          break;
+        }
+        if(tries===40){// fallback anywhere
+          const r2=Math.floor(Math.random()*GH),c2=Math.floor(Math.random()*GW);
+          if(worldGrid[r2][c2].biome!==B.OCN) creatures.push({id:sp.id,r:r2,c:c2,vr:0,vc:0,age:0});
+          break;
+        }
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+//  DRAW
+// ══════════════════════════════════════════
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.save();
+  const ox=canvas.width/2-(GW*CELL/2)*cam.zoom+cam.x;
+  const oy=canvas.height/2-(GH*CELL/2)*cam.zoom+cam.y;
+  ctx.translate(ox,oy);
+  ctx.scale(cam.zoom,cam.zoom);
+
+  // World
+  if(worldOC) ctx.drawImage(worldOC,0,0);
+
+  // Climate overlay
+  const cl=CLIMATES[G.climIdx];
+  if(cl.temp>32){ctx.fillStyle='rgba(220,80,0,.08)';ctx.fillRect(0,0,GW*CELL,GH*CELL);}
+  else if(cl.temp<0){ctx.fillStyle='rgba(160,210,255,.13)';ctx.fillRect(0,0,GW*CELL,GH*CELL);}
+  else if(cl.temp>25){ctx.fillStyle='rgba(200,140,0,.05)';ctx.fillRect(0,0,GW*CELL,GH*CELL);}
+
+  // Creatures
+  const t=Date.now()*.001;
+  creatures.forEach((cr,i)=>{
+    const sp=G.activeSpecies[cr.id];
+    if(!sp||sp.extinct) return;
+    const def=SP[cr.id];
+    const x=cr.c*CELL, y=cr.r*CELL;
+    const r=2.5+def.genes.size*3.5;
+    const bob=Math.sin(t*1.5+i*.7)*.8;
+
+    // Glow for chosen species
+    if(cr.id===G.chosen){
+      ctx.beginPath();ctx.arc(x,y+bob,r+5,0,Math.PI*2);
+      ctx.fillStyle=def.color+'18';ctx.fill();
+    }
+
+    // Body
+    ctx.beginPath();ctx.arc(x,y+bob,r,0,Math.PI*2);
+    ctx.fillStyle=def.color+'cc';ctx.fill();
+    ctx.strokeStyle=def.color;ctx.lineWidth=.8;ctx.stroke();
+
+    // Intelligence glow
+    if(def.genes.intel>.6){
+      ctx.beginPath();ctx.arc(x,y+bob,r+2.5,0,Math.PI*2);
+      ctx.strokeStyle=def.color+'55';ctx.lineWidth=1.5;ctx.stroke();
+    }
+
+    // Biome label (only for chosen, when zoom > 1.4)
+    if(cr.id===G.chosen&&cam.zoom>1.3){
+      const tile=worldGrid[Math.floor(cr.r)][Math.floor(cr.c)];
+      ctx.font=`${7/cam.zoom}px Crimson Pro,serif`;
+      ctx.fillStyle='rgba(255,255,255,.7)';
+      ctx.textAlign='center';
+      ctx.fillText(BIOMES[tile.biome],x,y+bob-r-2);
+    }
+  });
+
+  ctx.restore();
+}
+
+// ══════════════════════════════════════════
+//  GAME TICK
+// ══════════════════════════════════════════
+const TICK_INTERVAL={1:900,2:450,5:180};
+let lastTick=0;
+
+function gameTick(now){
+  if(G.paused) return;
+  if(now-lastTick<TICK_INTERVAL[G.speed]) return;
+  lastTick=now;
+  G.tick++;
+
+  if(G.tick%10===0){ G.year++; }
+
+  // Climate
+  G.climTick++;
+  const cl=CLIMATES[G.climIdx];
+  if(G.climTick>=cl.dur){
+    G.climTick=0;
+    G.climIdx=(G.climIdx+1)%CLIMATES.length;
+    addEv(`El clima cambió a ${CLIMATES[G.climIdx].name} ${CLIMATES[G.climIdx].icon}`,'neut');
+  }
+
+  // Species evolution
+  Object.values(G.activeSpecies).forEach(sp=>{
+    if(sp.extinct) return;
+    evolveSpecies(sp);
+  });
+
+  // Sync creatures every 3 ticks
+  if(G.tick%3===0) syncCreatures();
+
+  // Random world event every ~25 ticks
+  if(G.tick%25===0&&Math.random()<.45) randomWorldEvent();
+
+  // Check branch unlocks
+  if(G.tick%15===0) checkBranchUnlocks();
+
+  // Divine energy from chosen species growth
+  const chosen=G.activeSpecies[G.chosen];
+  if(chosen&&!chosen.extinct){
+    const growth=chosen.population-(chosen.popPrev||0);
+    if(growth>5){
+      const gain=Math.min(15,Math.floor(growth/5));
+      G.divine=Math.min(100,G.divine+gain);
+      if(gain>2) addEv(`⚡ +${gain} energía divina (${chosen.name} crece)`,'good');
+    }
+    chosen.popPrev=chosen.population;
+  }
+
+  updateUI();
+}
+
+function evolveSpecies(sp){
+  const def=SP[sp.id];
+  const cl=CLIMATES[G.climIdx];
+
+  // Fitness
+  let fit=1;
+  const tempDiff=Math.abs(cl.temp-def.preferTemp)/30;
+  fit-=tempDiff*.4;
+  if(cl.temp>28) fit*=.5+sp.genes.heat*.5;
+  if(cl.temp<4)  fit*=.5+sp.genes.cold*.5;
+  if(cl.temp<-2&&!sp.protected) fit*=.3+sp.genes.cold*.6;
+  fit=Math.max(.05,Math.min(1.2,fit));
+
+  // Count creatures in preferred biome
+  const myCr=creatures.filter(c=>c.id===sp.id);
+  const inPref=myCr.filter(c=>{
+    const tile=worldGrid[Math.floor(c.r)][Math.floor(c.c)];
+    return def.biomes.includes(tile.biome);
+  });
+  const hab=myCr.length>0?inPref.length/myCr.length:.5;
+  fit*=.6+hab*.4;
+
+  // Pop dynamics
+  const grow=fit*sp.genes.repro*.14;
+  const die=(1-fit)*.11+sp.population/sp.maxPop*.07;
+  const delta=Math.round(sp.population*(grow-die));
+  const prevPop=sp.population;
+  sp.population=Math.max(0,Math.min(sp.maxPop,sp.population+delta));
+
+  // Protected = never below 5
+  if(sp.protected) sp.population=Math.max(5,sp.population);
+
+  // Extinction
+  if(sp.population<=0&&!sp.extinct){
+    sp.extinct=true;sp.population=0;
+    addEv(`💀 Los ${sp.name} se han extinguido`,'bad');
+    creatures=creatures.filter(c=>c.id!==sp.id);
+    if(sp.id===G.chosen) addEv('⚠️ Tu especie elegida se extinguió. Selecciona otra.','bad');
+    return;
+  }
+
+  // Natural mutation every 8 ticks avg
+  if(Math.random()<.12) naturalMutate(sp,fit,cl.temp);
+}
+
+function naturalMutate(sp,fit,temp){
+  const keys=Object.keys(sp.genes);
+  const key=keys[Math.floor(Math.random()*keys.length)];
+  const before=sp.genes[key];
+  let d=(Math.random()-.45)*.05;
+  // Pressure
+  if(key==='heat'&&temp>28) d=Math.abs(d);
+  if(key==='cold'&&temp<4)  d=Math.abs(d);
+  if(key==='repro'&&fit<.4) d=Math.abs(d)*.7;
+  sp.genes[key]=Math.max(0,Math.min(1,sp.genes[key]+d));
+  const after=sp.genes[key];
+  if(Math.abs(after-before)>.025){
+    const GNAMES={size:'Tamaño',speed:'Velocidad',cold:'Resist.Frío',heat:'Resist.Calor',
+      aquatic:'Acuático',intel:'Inteligencia',repro:'Reproducción',armor:'Armadura'};
+    const dir=after>before?'↑':'↓';
+    const label=`${GNAMES[key]||key} ${dir}`;
+    sp.mutations.push(label);
+    if(sp.mutations.length>6) sp.mutations.shift();
+    if(Math.random()<.15) addEv(`🧬 ${sp.name}: ${label}`,'neut');
+  }
+}
+
+// ══════════════════════════════════════════
+//  BRANCH UNLOCKS
+// ══════════════════════════════════════════
+function checkBranchUnlocks(){
+  // For each active species, check if children can be proposed
+  Object.values(G.activeSpecies).forEach(sp=>{
+    if(sp.extinct) return;
+    const def=SP[sp.id];
+    if(!def.children||!def.children.length) return;
+    def.children.forEach(childId=>{
+      if(G.unlockedIds.has(childId)) return;
+      const child=SP[childId];
+      if(!child||!child.unlockCondition) return;
+      const cond=child.unlockCondition;
+      const popOk=!cond.pop||sp.population>=cond.pop;
+      const yearOk=!cond.year||G.year>=cond.year;
+      if(popOk&&yearOk&&!G.pendingBranch){
+        // Propose this branch
+        proposeBranch(sp,childId);
+      }
+    });
+  });
+}
+
+function proposeBranch(parent, childId){
+  const child=SP[childId];
+  if(!child) return;
+  // Find siblings (other children of same parent not yet proposed)
+  const siblings=SP[parent.id].children.filter(id=>!G.unlockedIds.has(id)&&SP[id]);
+  if(siblings.length===0) return;
+
+  G.pendingBranch={parent,siblings};
+  G.paused=true;
+  showBranchModal(parent,siblings);
+}
+
+function showBranchModal(parent,siblings){
+  document.getElementById('bmTitle').textContent=`🌿 Bifurcación Evolutiva`;
+  document.getElementById('bmSub').innerHTML=
+    `Los <strong style="color:${SP[parent.id].color}">${parent.name}</strong> han alcanzado un punto crítico de su evolución.<br>
+    Elige la dirección que tomarán sus descendientes:<br>
+    <small style="color:var(--text3)">(Coste en energía divina para acelerar la aparición)</small>`;
+
+  const opts=document.getElementById('bmOptions');
+  opts.innerHTML='';
+  siblings.forEach(id=>{
+    const s=SP[id];
+    const div=document.createElement('div');
+    div.className='bm-opt';
+    div.innerHTML=`
+      <div class="bm-opt-icon">${s.icon}</div>
+      <div>
+        <div class="bm-opt-name" style="color:${s.color}">${s.name}</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px">${s.type}</div>
+        <div class="bm-opt-desc">${s.desc}</div>
+        <div class="bm-opt-cost">Biomas: ${s.biomes.map(b=>BIOMES[b]).join(', ')}</div>
+      </div>
+    `;
+    div.onclick=()=>unlockBranch(id,parent);
+    opts.appendChild(div);
+  });
+
+  document.getElementById('branchModal').classList.add('open');
+}
+
+function unlockBranch(childId,parent){
+  document.getElementById('branchModal').classList.remove('open');
+  G.pendingBranch=null;
+  G.paused=false;
+
+  const def=SP[childId];
+  G.unlockedIds.add(childId);
+
+  // Create new active species
+  const parentSp=G.activeSpecies[parent.id];
+  const initPop=Math.floor(parentSp.population*.2);
+  parentSp.population=Math.max(5,parentSp.population-initPop);
+
+  G.activeSpecies[childId]={
+    ...JSON.parse(JSON.stringify(def)),
+    population:initPop,
+    maxPop:def.unlockCost*12+200,
+    extinct:false,protected:false,
+    mutations:[],popPrev:initPop,
+    genes:{...def.genes},
+  };
+
+  addEv(`🧬 Nueva especie: ${def.icon} ${def.name} (${def.type}) emergió de los ${parent.name}`,'good');
+  notify(`¡Nueva especie! ${def.icon} ${def.name}`);
+  syncCreatures();
+  buildTree();
+  document.getElementById('branchModal').classList.remove('open');
+}
+
+// ══════════════════════════════════════════
+//  GOD POWERS
+// ══════════════════════════════════════════
+const POWS=[
+  {cost:20,fn:()=>{
+    const sp=G.activeSpecies[G.chosen];
+    if(!sp||sp.extinct){notify('Selecciona una especie viva');return false;}
+    for(let i=0;i<4;i++) naturalMutate(sp,.8,CLIMATES[G.climIdx].temp);
+    addEv(`⚡ Mutación acelerada en ${sp.name}`,'good');
+    notify(`🧬 Mutación forzada: ${sp.name}`);
+  }},
+  {cost:30,fn:()=>{
+    G.climIdx=(G.climIdx+1)%CLIMATES.length;G.climTick=0;
+    addEv(`⚡ Clima alterado: ${CLIMATES[G.climIdx].name}`,'neut');
+    notify(`🌡️ Nuevo clima: ${CLIMATES[G.climIdx].name}`);
+  }},
+  {cost:15,fn:()=>{
+    const sp=G.activeSpecies[G.chosen];
+    if(!sp||sp.extinct){notify('Selecciona una especie viva');return false;}
+    const b=Math.floor(sp.population*.25)+15;
+    sp.population=Math.min(sp.maxPop,sp.population+b);
+    addEv(`⚡ ${sp.name} fertilizados +${b} población`,'good');
+    notify(`🌱 +${b} población para ${sp.name}`);
+  }},
+  {cost:25,fn:()=>{
+    const sp=G.activeSpecies[G.chosen];
+    if(!sp||sp.extinct){notify('Selecciona una especie viva');return false;}
+    sp.protected=true;
+    addEv(`⚡ ${sp.name} protegidos de extinción`,'good');
+    notify(`🛡️ ${sp.name} protegidos`);
+    setTimeout(()=>{if(G.activeSpecies[G.chosen])G.activeSpecies[G.chosen].protected=false;},G.year+50);
+  }},
+  {cost:40,fn:()=>{
+    const sp=G.activeSpecies[G.chosen];
+    if(!sp||sp.extinct){notify('Selecciona una especie viva');return false;}
+    sp.genes.intel=Math.min(1,sp.genes.intel+.1);
+    sp.genes.repro=Math.min(1,sp.genes.repro+.06);
+    const cl=CLIMATES[G.climIdx];
+    if(cl.temp>22) sp.genes.heat=Math.min(1,sp.genes.heat+.08);
+    else sp.genes.cold=Math.min(1,sp.genes.cold+.08);
+    addEv(`⚡ Evolución guiada: ${sp.name}`,'good');
+    notify(`👑 Evolución guiada en ${sp.name}`);
+  }},
+  {cost:50,fn:()=>{
+    // Cataclysm on all NON-chosen species
+    Object.values(G.activeSpecies).forEach(sp=>{
+      if(sp.id===G.chosen||sp.extinct) return;
+      const loss=Math.floor(sp.population*.4);
+      sp.population=Math.max(0,sp.population-loss);
+      addEv(`☄️ Cataclismo: ${sp.name} pierde ${loss} individuos`,'bad');
+    });
+    creatures=creatures.filter(c=>c.id===G.chosen||Math.random()>.4);
+    notify('☄️ ¡Cataclismo rival desatado!');
+  }},
+];
+
+function usePow(i){
+  const p=POWS[i];
+  if(G.divine<p.cost){notify('⚡ Sin energía divina suficiente');return;}
+  const r=p.fn();
+  if(r!==false){
+    G.divine=Math.max(0,G.divine-p.cost);
+    updateGodBtns();
+    updateUI();
+  }
+}
+
+// ══════════════════════════════════════════
+//  TIMED CONTEXTUAL EVENT SYSTEM
+// ══════════════════════════════════════════
+// Each active event: { id, type, card(DOM), deadline(ms), onExpire(), options[] }
+let activeEvents=[];
+let eventIdCounter=0;
+const MAX_EVENTS=3;
+// Ticks between event checks (real ms via gameTick)
+// Events fire every ~20-35 ticks
+
+function randomWorldEvent(){
+  if(activeEvents.length>=MAX_EVENTS) return;
+  const living=Object.values(G.activeSpecies).filter(s=>!s.extinct);
+  if(!living.length) return;
+  const chosen=G.activeSpecies[G.chosen];
+  if(!chosen||chosen.extinct) return;
+
+  const chosenDef=SP[G.chosen];
+  const cl=CLIMATES[G.climIdx];
+  const rivals=living.filter(s=>s.id!==G.chosen);
+
+  // Build candidate events based on context
+  const candidates=[];
+
+  // 1. PREDATOR NEARBY (if chosen is small/herbivore and there's a big species)
+  const predator=rivals.find(r=>SP[r.id].genes.size>chosenDef.genes.size+.25&&SP[r.id].genes.size>.5);
+  if(predator){
+    candidates.push({
+      type:'urgent',
+      icon:'🐉',
+      title:`Los ${predator.name} se acercan a tu territorio`,
+      desc:`Una manada de ${predator.name} ha detectado a los ${chosen.name} y se dirige hacia ellos. Debes actuar rápido.`,
+      duration:18000,
+      options:[
+        {
+          label:'🏃 Huir al territorio seguro',
+          cls:'safe',
+          effect:'Pierdes -15% población pero evitas el encuentro. Tus criaturas migran.',
+          fn:()=>{
+            const loss=Math.floor(chosen.population*.15);
+            chosen.population=Math.max(5,chosen.population-loss);
+            // Move creatures away
+            creatures.filter(c=>c.id===G.chosen).forEach(c=>{c.vr=(Math.random()-.5)*3;c.vc=(Math.random()-.5)*3;});
+            addEv(`🏃 Los ${chosen.name} huyen de los ${predator.name} (-${loss} población)`,'neut');
+          }
+        },
+        {
+          label:'⚔️ Resistir y contraatacar',
+          cls:'danger',
+          effect:'Pierdes -30% población pero ganas +Armadura y +Velocidad por presión evolutiva.',
+          fn:()=>{
+            const loss=Math.floor(chosen.population*.3);
+            chosen.population=Math.max(3,chosen.population-loss);
+            chosen.genes.armor=Math.min(1,chosen.genes.armor+.07);
+            chosen.genes.speed=Math.min(1,chosen.genes.speed+.05);
+            chosen.mutations.push('Armadura ↑ (combate)','Velocidad ↑ (combate)');
+            addEv(`⚔️ Los ${chosen.name} combaten a los ${predator.name} — evolución acelerada por presión`,'warn');
+          }
+        },
+        {
+          label:'🌿 Camuflarse y esperar',
+          cls:'risky',
+          effect:'50% de ser encontrados. Si sobrevives, +Camuflaje permanente.',
+          fn:()=>{
+            if(Math.random()<.5){
+              const loss=Math.floor(chosen.population*.12);
+              chosen.population=Math.max(3,chosen.population-loss);
+              chosen.genes.camouflage=Math.min(1,(chosen.genes.camouflage||0)+.1);
+              chosen.mutations.push('Camuflaje ↑ (supervivencia)');
+              addEv(`🌿 Los ${chosen.name} sobreviven ocultos — Camuflaje mejorado`,'good');
+            } else {
+              const loss=Math.floor(chosen.population*.35);
+              chosen.population=Math.max(2,chosen.population-loss);
+              addEv(`💀 Los ${predator.name} encontraron a los ${chosen.name} ocultos (-${loss})`,'bad');
+            }
+          }
+        },
+      ],
+      onExpire:()=>{
+        // Did nothing: suffer full predation
+        const loss=Math.floor(chosen.population*.28);
+        chosen.population=Math.max(2,chosen.population-loss);
+        addEv(`⏰ No reaccionaste — los ${predator.name} atacaron libremente (-${loss})`,'bad');
+      }
+    });
+  }
+
+  // 2. VOLCANIC ERUPTION
+  if(Math.random()<.25){
+    candidates.push({
+      type:'urgent',
+      icon:'🌋',
+      title:'Erupción volcánica al norte del territorio',
+      desc:`Las cenizas cubren la zona donde viven los ${chosen.name}. El suelo se calienta y los alimentos escasean.`,
+      duration:15000,
+      options:[
+        {
+          label:'🚶 Migrar al sur',
+          cls:'safe',
+          effect:'Nuevo bioma desconocido. Pierdes -10% pero encuentras recursos frescos.',
+          fn:()=>{
+            const loss=Math.floor(chosen.population*.1);
+            chosen.population=Math.max(3,chosen.population-loss);
+            // Change preferred biomes slightly
+            const newBiome=[B.GRS,B.FOR,B.BCH][Math.floor(Math.random()*3)];
+            if(!SP[G.chosen].biomes.includes(newBiome)) SP[G.chosen].biomes.push(newBiome);
+            addEv(`🚶 Los ${chosen.name} migran y descubren nuevos territorios`,'good');
+          }
+        },
+        {
+          label:'🔥 Quedarse y adaptarse',
+          cls:'risky',
+          effect:'Riesgo alto. Si sobrevives: +Resist.Calor permanente.',
+          fn:()=>{
+            const roll=Math.random();
+            if(roll>.35){
+              const loss=Math.floor(chosen.population*.2);
+              chosen.population=Math.max(3,chosen.population-loss);
+              chosen.genes.heat=Math.min(1,chosen.genes.heat+.12);
+              chosen.mutations.push('Resist.Calor ↑ (erupción)');
+              addEv(`🔥 Los ${chosen.name} sobreviven la erupción — Resist.Calor +12%`,'good');
+            } else {
+              const loss=Math.floor(chosen.population*.45);
+              chosen.population=Math.max(2,chosen.population-loss);
+              addEv(`💀 La erupción devastó a los ${chosen.name} (-${loss})`,'bad');
+            }
+          }
+        },
+        {
+          label:'⛏️ Buscar refugio subterráneo',
+          cls:'safe',
+          effect:'Seguro pero lento. -5% pop, +Armadura leve.',
+          fn:()=>{
+            const loss=Math.floor(chosen.population*.05);
+            chosen.population=Math.max(3,chosen.population-loss);
+            chosen.genes.armor=Math.min(1,chosen.genes.armor+.04);
+            addEv(`⛏️ Los ${chosen.name} se refugian bajo tierra durante la erupción`,'neut');
+          }
+        },
+      ],
+      onExpire:()=>{
+        const loss=Math.floor(chosen.population*.3);
+        chosen.population=Math.max(2,chosen.population-loss);
+        addEv(`⏰ Sin reacción ante la erupción — los ${chosen.name} sufren graves pérdidas (-${loss})`,'bad');
+      }
+    });
+  }
+
+  // 3. FOOD ABUNDANCE
+  if(Math.random()<.3){
+    const biome=BIOMES[chosenDef.biomes[0]||B.GRS];
+    candidates.push({
+      type:'good',
+      icon:'🌿',
+      title:`Gran abundancia de recursos en ${biome}`,
+      desc:`Las lluvias han generado una explosión de alimentos en el territorio de los ${chosen.name}. Es el momento de actuar.`,
+      duration:14000,
+      options:[
+        {
+          label:'🍽️ Reproducción masiva',
+          cls:'safe',
+          effect:'+25% población inmediatamente.',
+          fn:()=>{
+            const b=Math.floor(chosen.population*.25)+20;
+            chosen.population=Math.min(chosen.maxPop,chosen.population+b);
+            addEv(`🍽️ Los ${chosen.name} se reproducen masivamente (+${b})`,'good');
+          }
+        },
+        {
+          label:'🧬 Invertir en evolución',
+          cls:'risky',
+          effect:'+10% población y mutación forzada en gen aleatorio.',
+          fn:()=>{
+            const b=Math.floor(chosen.population*.1);
+            chosen.population=Math.min(chosen.maxPop,chosen.population+b);
+            naturalMutate(chosen,.9,cl.temp);
+            naturalMutate(chosen,.9,cl.temp);
+            addEv(`🧬 Los ${chosen.name} invierten los recursos en evolución`,'good');
+          }
+        },
+        {
+          label:'🏰 Expandir territorio',
+          cls:'safe',
+          effect:'Nuevas criaturas aparecen en biomas adyacentes.',
+          fn:()=>{
+            for(let i=0;i<6;i++){
+              const r=Math.floor(Math.random()*GH),c2=Math.floor(Math.random()*GW);
+              if(worldGrid[r][c2].biome!==B.OCN) creatures.push({id:G.chosen,r,c:c2,vr:0,vc:0,age:0});
+            }
+            chosen.population=Math.min(chosen.maxPop,chosen.population+15);
+            addEv(`🏰 Los ${chosen.name} expanden su territorio (+15 población)`,'good');
+          }
+        },
+      ],
+      onExpire:()=>{
+        // Missed the boom: still get small bonus
+        const b=Math.floor(chosen.population*.05);
+        chosen.population=Math.min(chosen.maxPop,chosen.population+b);
+        addEv(`⏰ Reaccionaste tarde — los ${chosen.name} aprovechan poco la abundancia (+${b})`,'neut');
+      }
+    });
+  }
+
+  // 4. DROUGHT / CLIMATE STRESS
+  if(cl.temp>30||cl.temp<2){
+    const isHot=cl.temp>30;
+    candidates.push({
+      type:'warn',
+      icon:isHot?'☀️':'❄️',
+      title:isHot?`Sequía extrema en el territorio`:`Ola de frío devastadora`,
+      desc:`El clima ${isHot?'árido':'gélido'} está diezmando los recursos de los ${chosen.name}. La presión es enorme.`,
+      duration:16000,
+      options:[
+        {
+          label:isHot?'💧 Buscar agua':'🔥 Buscar calor',
+          cls:'safe',
+          effect:`Migras a zona favorable. -8% pop pero evitas daño climático.`,
+          fn:()=>{
+            const loss=Math.floor(chosen.population*.08);
+            chosen.population=Math.max(3,chosen.population-loss);
+            const safe=isHot?B.SWP:B.JNG;
+            if(!SP[G.chosen].biomes.includes(safe)) SP[G.chosen].biomes.push(safe);
+            addEv(`${isHot?'💧':'🔥'} Los ${chosen.name} migran a zona más favorable`,'neut');
+          }
+        },
+        {
+          label:'💪 Resistir y evolucionar',
+          cls:'risky',
+          effect:`-20% pop, pero ganas +${isHot?'Resist.Calor':'Resist.Frío'} acelerado.`,
+          fn:()=>{
+            const loss=Math.floor(chosen.population*.2);
+            chosen.population=Math.max(3,chosen.population-loss);
+            if(isHot){ chosen.genes.heat=Math.min(1,chosen.genes.heat+.1); chosen.mutations.push('Resist.Calor ↑ (sequía)'); }
+            else      { chosen.genes.cold=Math.min(1,chosen.genes.cold+.1); chosen.mutations.push('Resist.Frío ↑ (helada)'); }
+            addEv(`💪 Los ${chosen.name} resisten el clima extremo — adaptación genética`,'warn');
+          }
+        },
+      ],
+      onExpire:()=>{
+        const loss=Math.floor(chosen.population*.22);
+        chosen.population=Math.max(2,chosen.population-loss);
+        addEv(`⏰ Sin respuesta al clima — los ${chosen.name} sufren las consecuencias (-${loss})`,'bad');
+      }
+    });
+  }
+
+  // 5. RIVAL SPECIES DIPLOMACY (if intelligence > 0.5 for both)
+  const smartRival=rivals.find(r=>SP[r.id].genes.intel>.45&&chosen.genes.intel>.45);
+  if(smartRival&&Math.random()<.4){
+    candidates.push({
+      type:'neut',
+      icon:'🤝',
+      title:`Los ${smartRival.name} proponen coexistir`,
+      desc:`Emisarios de los ${smartRival.name} se han acercado. Su inteligencia es similar a la vuestra. Proponen un acuerdo de no agresión.`,
+      duration:20000,
+      options:[
+        {
+          label:'🤝 Aceptar la alianza',
+          cls:'safe',
+          effect:'Protección mutua. Ninguna especie atacará a la otra por 50 años.',
+          fn:()=>{
+            smartRival.protected=true;
+            chosen.protected=true;
+            setTimeout(()=>{
+              if(G.activeSpecies[G.chosen]) G.activeSpecies[G.chosen].protected=false;
+              if(G.activeSpecies[smartRival.id]) G.activeSpecies[smartRival.id].protected=false;
+            },50000);
+            addEv(`🤝 Alianza formada: ${chosen.name} y ${smartRival.name} pactan no agresión`,'good');
+          }
+        },
+        {
+          label:'⚔️ Rechazar y competir',
+          cls:'danger',
+          effect:'Competencia directa. Quien tenga más población gana recursos del rival.',
+          fn:()=>{
+            if(chosen.population>smartRival.population){
+              const gain=Math.floor(smartRival.population*.15);
+              chosen.population=Math.min(chosen.maxPop,chosen.population+gain);
+              smartRival.population=Math.max(5,smartRival.population-gain);
+              addEv(`⚔️ Los ${chosen.name} dominan a los ${smartRival.name} en la competencia (+${gain})`,'good');
+            } else {
+              const loss=Math.floor(chosen.population*.15);
+              chosen.population=Math.max(3,chosen.population-loss);
+              addEv(`⚔️ Los ${smartRival.name} dominan la competencia — los ${chosen.name} retroceden (-${loss})`,'bad');
+            }
+          }
+        },
+        {
+          label:'🧬 Aprender de ellos',
+          cls:'risky',
+          effect:'Intercambio genético. +Inteligencia para ambos.',
+          fn:()=>{
+            chosen.genes.intel=Math.min(1,chosen.genes.intel+.06);
+            smartRival.genes.intel=Math.min(1,smartRival.genes.intel+.04);
+            chosen.mutations.push('Inteligencia ↑ (intercambio)');
+            addEv(`🧬 ${chosen.name} y ${smartRival.name} intercambian conocimiento — ambos evolucionan`,'good');
+          }
+        },
+      ],
+      onExpire:()=>{
+        addEv(`⏰ Los ${smartRival.name} se retiran sin respuesta — oportunidad perdida`,'neut');
+      }
+    });
+  }
+
+  // 6. DISEASE OUTBREAK
+  if(Math.random()<.3&&chosen.population>60){
+    candidates.push({
+      type:'urgent',
+      icon:'🦠',
+      title:`Epidemia entre los ${chosen.name}`,
+      desc:`Una enfermedad desconocida se propaga rápidamente. Cada día que pasa aumenta el daño.`,
+      duration:12000,
+      options:[
+        {
+          label:'🔬 Aislar individuos enfermos',
+          cls:'safe',
+          effect:'-10% población ahora pero la enfermedad se detiene.',
+          fn:()=>{
+            const loss=Math.floor(chosen.population*.1);
+            chosen.population=Math.max(3,chosen.population-loss);
+            addEv(`🔬 Los ${chosen.name} controlan la epidemia con aislamiento (-${loss})`,'neut');
+          }
+        },
+        {
+          label:'🧬 Dejar actuar la selección',
+          cls:'risky',
+          effect:'-25% pop, pero los supervivientes ganan inmunidad genética.',
+          fn:()=>{
+            const loss=Math.floor(chosen.population*.25);
+            chosen.population=Math.max(3,chosen.population-loss);
+            chosen.genes.armor=Math.min(1,chosen.genes.armor+.08);
+            chosen.genes.repro=Math.min(1,chosen.genes.repro+.05);
+            chosen.mutations.push('Inmunidad ↑ (epidemia)');
+            addEv(`🧬 La epidemia actúa como selección — los ${chosen.name} sobrevivientes son más fuertes`,'warn');
+          }
+        },
+      ],
+      onExpire:()=>{
+        const loss=Math.floor(chosen.population*.35);
+        chosen.population=Math.max(2,chosen.population-loss);
+        addEv(`⏰ La epidemia se descontroló — los ${chosen.name} pierden ${loss} individuos`,'bad');
+      }
+    });
+  }
+
+  if(!candidates.length) return;
+
+  // Pick one random candidate
+  const ev=candidates[Math.floor(Math.random()*candidates.length)];
+  spawnEventCard(ev);
+}
+
+// ── SPAWN EVENT CARD ──
+function spawnEventCard(ev){
+  const id='ev'+(++eventIdCounter);
+  const startTime=Date.now();
+  const deadline=startTime+ev.duration;
+
+  const card=document.createElement('div');
+  card.className=`ev-card ${ev.type}`;
+  card.id=id;
+  card.innerHTML=`
+    <div class="ev-card-timer" id="${id}_timer" style="width:100%"></div>
+    <div class="ev-card-body">
+      <div class="ev-card-header">
+        <span class="ev-card-icon">${ev.icon}</span>
+        <span class="ev-card-title">${ev.title}</span>
+        <span class="ev-card-yr">Año ${G.year}</span>
+      </div>
+      <div class="ev-card-desc">${ev.desc}</div>
+      <div class="ev-card-opts">
+        ${ev.options.map((o,i)=>`
+          <button class="ev-opt-btn ${o.cls||''}" data-eid="${id}" data-oidx="${i}">
+            <span class="opt-label">${o.label}</span>
+            <span class="opt-effect">${o.effect}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('eventCards').appendChild(card);
+
+  // Button handlers
+  card.querySelectorAll('.ev-opt-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const idx=parseInt(btn.dataset.oidx);
+      ev.options[idx].fn();
+      dismissEventCard(id,ev);
+      updateUI();
+    });
+  });
+
+  // Track active event
+  const evObj={id,card,deadline,ev};
+  activeEvents.push(evObj);
+
+  // Timer update loop
+  const timerEl=document.getElementById(`${id}_timer`);
+  const timerLoop=()=>{
+    if(!document.getElementById(id)) return;
+    const remaining=deadline-Date.now();
+    const pct=Math.max(0,remaining/ev.duration*100);
+    if(timerEl) timerEl.style.width=pct+'%';
+    if(remaining<=3000&&timerEl){
+      timerEl.style.background='#ef4444';
+      card.style.borderColor='rgba(239,68,68,.7)';
+    }
+    if(remaining>0) requestAnimationFrame(timerLoop);
+    else expireEventCard(id,ev);
+  };
+  requestAnimationFrame(timerLoop);
+}
+
+function dismissEventCard(id,ev){
+  const card=document.getElementById(id);
+  if(card){card.style.opacity='0';card.style.transform='translateY(10px)';card.style.transition='all .25s';setTimeout(()=>card.remove(),250);}
+  activeEvents=activeEvents.filter(e=>e.id!==id);
+}
+
+function expireEventCard(id,ev){
+  if(!document.getElementById(id)) return;
+  ev.onExpire&&ev.onExpire();
+  dismissEventCard(id,ev);
+  updateUI();
+}
+
+// ══════════════════════════════════════════
+//  CREATURE SYNC
+// ══════════════════════════════════════════
+function syncCreatures(){
+  // Move existing
+  creatures.forEach(cr=>{
+    const sp=G.activeSpecies[cr.id];
+    if(!sp||sp.extinct){return;}
+    cr.age+=.1;
+    cr.vr+=(Math.random()-.5)*.25;
+    cr.vc+=(Math.random()-.5)*.25;
+    cr.vr*=.8; cr.vc*=.8;
+    cr.r=Math.max(0,Math.min(GH-1,cr.r+cr.vr));
+    cr.c=Math.max(0,Math.min(GW-1,cr.c+cr.vc));
+    // avoid ocean
+    const def=SP[cr.id];
+    const tile=worldGrid[Math.floor(cr.r)][Math.floor(cr.c)];
+    if(tile.biome===B.OCN&&def.genes.aquatic<.7){
+      cr.r-=cr.vr*2; cr.c-=cr.vc*2;
+      cr.vr*=-.5; cr.vc*=-.5;
+    }
+  });
+
+  // Remove extinct
+  creatures=creatures.filter(cr=>{
+    const sp=G.activeSpecies[cr.id];
+    return sp&&!sp.extinct;
+  });
+
+  // Adjust counts
+  Object.values(G.activeSpecies).forEach(sp=>{
+    if(sp.extinct) return;
+    const target=Math.max(1,Math.floor(sp.population/6));
+    const cur=creatures.filter(c=>c.id===sp.id).length;
+    const def=SP[sp.id];
+    if(cur<target){
+      for(let i=0;i<Math.min(4,target-cur);i++){
+        let tries=0,placed=false;
+        while(tries++<30&&!placed){
+          const r=Math.floor(Math.random()*GH),c=Math.floor(Math.random()*GW);
+          if(def.biomes.includes(worldGrid[r][c].biome)){
+            creatures.push({id:sp.id,r:r+Math.random(),c:c+Math.random(),vr:0,vc:0,age:0});
+            placed=true;
+          }
+        }
+        if(!placed){
+          const r=Math.floor(Math.random()*GH),c=Math.floor(Math.random()*GW);
+          if(worldGrid[r][c].biome!==B.OCN) creatures.push({id:sp.id,r,c,vr:0,vc:0,age:0});
+        }
+      }
+    } else if(cur>target+4){
+      let rem=0;
+      creatures=creatures.filter(c=>{
+        if(c.id===sp.id&&rem<cur-target){rem++;return false;}
+        return true;
+      });
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+//  UI
+// ══════════════════════════════════════════
+function updateUI(){
+  const living=Object.values(G.activeSpecies).filter(s=>!s.extinct);
+  const totalPop=Object.values(G.activeSpecies).reduce((a,s)=>a+s.population,0);
+  document.getElementById('sYear').textContent=G.year;
+  document.getElementById('sSpecies').textContent=living.length;
+  document.getElementById('sPop').textContent=totalPop.toLocaleString();
+  const cl=CLIMATES[G.climIdx];
+  document.getElementById('sClimate').textContent=`${cl.icon} ${cl.name} ${cl.temp}°C`;
+  document.getElementById('dVal').textContent=Math.floor(G.divine);
+  document.getElementById('dFill').style.width=G.divine+'%';
+  updateGodBtns();
+  buildTree();
+  updateGenes();
+}
+
+function updateGodBtns(){
+  POWS.forEach((p,i)=>{
+    const b=document.getElementById('pw'+i);
+    if(b) b.disabled=G.divine<p.cost;
+  });
+}
+
+// ── TREE BUILDER ──
+function buildTree(){
+  const wrap=document.getElementById('treeWrap');
+  wrap.innerHTML='';
+  // Render root then recurse
+  renderNode('glypthar',wrap,0);
+}
+
+function renderNode(id,container,depth){
+  const def=SP[id];
+  if(!def) return;
+  const active=G.activeSpecies[id];
+  const unlocked=G.unlockedIds.has(id);
+  const isChosen=G.chosen===id;
+  const isExtinct=active&&active.extinct;
+
+  let cls='tree-node-inner';
+  if(!unlocked) cls+=' locked';
+  else if(isExtinct) cls+=' extinct';
+  else if(isChosen) cls+=' active';
+
+  const div=document.createElement('div');
+  div.className='tree-node';
+
+  const inner=document.createElement('div');
+  inner.className=cls;
+  inner.style.borderLeftColor=def.color;
+
+  const pop=active?active.population:0;
+  inner.innerHTML=`
+    <div class="node-icon">${def.icon}</div>
+    <div class="node-info">
+      <div class="node-name" style="color:${unlocked?def.color:'var(--text3)'}">${def.name}</div>
+      <div class="node-type">${def.type}</div>
+    </div>
+    ${unlocked?`<div class="node-pop">${pop}</div>`:`<div class="node-lock">🔒</div>`}
+  `;
+
+  if(unlocked&&!isExtinct){
+    inner.addEventListener('click',()=>{
+      G.chosen=id;
+      addEv(`👁️ Ahora guías a los ${def.name}`,'neut');
+      updateUI();
+    });
+  }
+
+  div.appendChild(inner);
+
+  // Children
+  if(def.children&&def.children.length){
+    const childWrap=document.createElement('div');
+    childWrap.className='tree-indent';
+    def.children.forEach(cid=>{
+      const cdef=SP[cid];
+      if(!cdef) return;
+      const cunlocked=G.unlockedIds.has(cid);
+      const cactive=G.activeSpecies[cid];
+      const popOk=!cdef.unlockCondition?.pop||active&&active.population>=(cdef.unlockCondition.pop*.7);
+      const isAvail=!cunlocked&&unlocked&&!isExtinct&&active&&popOk&&!G.pendingBranch;
+
+      if(isAvail){
+        // Show as available
+        const avDiv=document.createElement('div');
+        avDiv.className='tree-node-inner available';
+        avDiv.innerHTML=`
+          <div class="node-icon" style="opacity:.6">${cdef.icon}</div>
+          <div class="node-info">
+            <div class="node-name" style="color:${cdef.color};opacity:.7">${cdef.name}</div>
+            <div class="node-type">${cdef.type}</div>
+          </div>
+          <div style="font-size:9px;color:var(--accent3)">~${cdef.unlockCondition?.pop||'?'} hab</div>
+        `;
+        childWrap.appendChild(avDiv);
+      } else {
+        renderNode(cid,childWrap,depth+1);
+      }
+    });
+    div.appendChild(childWrap);
+  }
+
+  container.appendChild(div);
+}
+
+function updateGenes(){
+  const sp=G.activeSpecies[G.chosen];
+  const sec=document.getElementById('genesSection');
+  if(!sp||sp.extinct){sec.style.display='none';return;}
+  sec.style.display='block';
+  document.getElementById('genesSpName').textContent=sp.name;
+
+  const GNAMES={size:'Tamaño',speed:'Velocidad',cold:'Resist.Frío',heat:'Resist.Calor',
+    aquatic:'Acuático',intel:'Inteligencia',repro:'Reproducción',armor:'Armadura',camouflage:'Camuflaje'};
+  const GCOLS={size:'#f87171',speed:'#fbbf24',cold:'#93c5fd',heat:'#fb923c',
+    aquatic:'#22d3ee',intel:'#c084fc',repro:'#4ade80',armor:'#a78bfa',camouflage:'#a3e635'};
+
+  document.getElementById('genesList').innerHTML=
+    Object.entries(sp.genes).map(([k,v])=>`
+      <div class="gene-row">
+        <div class="gene-lbl">${GNAMES[k]||k}</div>
+        <div class="gene-bar"><div class="gene-fill" style="width:${v*100}%;background:${GCOLS[k]||'#4ade80'}"></div></div>
+        <div class="gene-v">${Math.round(v*100)}</div>
+      </div>`).join('');
+
+  document.getElementById('mutationsList').innerHTML=
+    sp.mutations.length?`<div style="font-size:9px;color:var(--text3);margin-bottom:3px">Mutaciones recientes:</div>`+
+    sp.mutations.slice(-4).map(m=>`<div style="font-size:10px;color:var(--accent);margin-bottom:2px">• ${m}</div>`).join(''):'';
+}
+
+function addEv(txt,type='neut'){
+  const log=document.getElementById('evLog');
+  const d=document.createElement('div');
+  d.className=`ev-item ${type}`;
+  d.innerHTML=`<div class="ev-yr">Año ${G.year}</div><div class="ev-txt">${txt}</div>`;
+  log.insertBefore(d,log.firstChild);
+  while(log.children.length>40) log.removeChild(log.lastChild);
+}
+
+let notifTimer;
+function notify(msg){
+  const el=document.getElementById('notif');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(notifTimer);
+  notifTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ══════════════════════════════════════════
+//  INPUT
+// ══════════════════════════════════════════
+canvas.addEventListener('mousedown',e=>{cam.drag=true;cam.lx=e.clientX;cam.ly=e.clientY;});
+canvas.addEventListener('mousemove',e=>{
+  if(!cam.drag) return;
+  cam.x+=e.clientX-cam.lx;cam.y+=e.clientY-cam.ly;
+  cam.lx=e.clientX;cam.ly=e.clientY;
+});
+canvas.addEventListener('mouseup',()=>cam.drag=false);
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  cam.zoom=Math.max(.35,Math.min(3.5,cam.zoom*(e.deltaY>0?.9:1.11)));
+},{passive:false});
+
+canvas.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){cam.drag=true;cam.lx=e.touches[0].clientX;cam.ly=e.touches[0].clientY;}
+},{passive:true});
+canvas.addEventListener('touchmove',e=>{
+  if(e.touches.length===1&&cam.drag){
+    cam.x+=e.touches[0].clientX-cam.lx;cam.y+=e.touches[0].clientY-cam.ly;
+    cam.lx=e.touches[0].clientX;cam.ly=e.touches[0].clientY;
+  }
+},{passive:true});
+canvas.addEventListener('touchend',()=>cam.drag=false);
+
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault();togglePause();}
+});
+
+document.querySelectorAll('.spd-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    G.speed=parseInt(b.dataset.s);
+    document.querySelectorAll('.spd-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+  });
+});
+
+document.getElementById('btnPause').addEventListener('click',togglePause);
+function togglePause(){
+  if(G.pendingBranch) return;
+  G.paused=!G.paused;
+  const btn=document.getElementById('btnPause');
+  btn.textContent=G.paused?'▶ Reanudar':'⏸ Pausa';
+  btn.className='tbtn '+(G.paused?'paused':'pause');
+}
+
+document.getElementById('bmSkip').addEventListener('click',()=>{
+  document.getElementById('branchModal').classList.remove('open');
+  G.pendingBranch=null;
+  G.paused=false;
+});
+
+window.addEventListener('resize',()=>{
+  canvas.width=window.innerWidth;
+  canvas.height=window.innerHeight;
+});
+
+// ══════════════════════════════════════════
+//  MAIN LOOP
+// ══════════════════════════════════════════
+function loop(now){
+  gameTick(now);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ── INIT ──
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+generateWorld();
+buildWorldCache();
+spawnCreatures();
+updateUI();
+addEv('🌊 El mundo despierta. El Glypthar emerge de las aguas primordiales...','good');
+addEv('🧬 Una sola especie. Un mundo entero por conquistar.','neut');
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
